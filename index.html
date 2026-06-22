@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Question Paper Generator</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Supabase JS Client Library CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- NAVIGATION SIDEBAR -->
+    <aside class="sidebar" id="app-sidebar" style="display: none;">
+      <div class="brand-section">
+        <div class="brand-logo">Q</div>
+        <div class="brand-name">PaperGen AI</div>
+      </div>
+      
+      <nav class="nav-menu" id="nav-menu-container">
+        <!-- Dynamic Navigation Links injected here -->
+      </nav>
+      
+      <div class="sidebar-footer">
+        <div class="user-profile-info">
+          <div class="user-avatar" id="user-avatar-initials">U</div>
+          <div class="user-details">
+            <span class="user-name" id="profile-user-name">Professor Name</span>
+            <span class="user-role" id="profile-user-role">Teacher</span>
+          </div>
+        </div>
+        <button class="nav-item" id="btn-sidebar-logout" style="margin-top: 10px;">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN VIEWPORT -->
+    <main class="main-viewport">
+      
+      <!-- 1. AUTHENTICATION VIEW -->
+      <section class="app-view active-view" id="view-auth">
+        <div class="auth-wrapper">
+          
+          <!-- LOGIN CONTAINER -->
+          <div class="glass-card auth-card" id="auth-login-container">
+            <div class="auth-header">
+              <div class="brand-logo" style="width: 50px; height: 50px; font-size: 24px; margin-bottom: 8px;">Q</div>
+              <h2 class="auth-title">Welcome Back</h2>
+              <p class="auth-subtitle">AI Question Paper Generator Access</p>
+            </div>
+            
+            <form id="form-login">
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="login-email" required placeholder="name@department.edu">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="login-password" required placeholder="••••••••">
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Sign In</button>
+            </form>
+            
+            <div style="text-align: center; font-size: 14px; color: var(--text-muted); margin-top: 10px;">
+              First-time user? <a href="#" id="link-show-signup" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign Up Here</a>
+            </div>
+          </div>
+
+          <!-- SIGN UP CONTAINER -->
+          <div class="glass-card auth-card" id="auth-signup-container" style="display: none;">
+            <div class="auth-header">
+              <div class="brand-logo" style="width: 50px; height: 50px; font-size: 24px; margin-bottom: 8px;">Q</div>
+              <h2 class="auth-title">Create Account</h2>
+              <p class="auth-subtitle">Register for Department PaperGen</p>
+            </div>
+            
+            <form id="form-signup">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="signup-name" required placeholder="Professor John Doe">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" class="form-control" id="signup-email" required placeholder="johndoe@department.edu">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="signup-password" required minlength="6" placeholder="••••••••">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-control" id="signup-role" required>
+                  <option value="teacher">Teacher / Faculty</option>
+                  <option value="hod">Head of Department (HOD)</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Sign Up</button>
+            </form>
+            
+            <div style="text-align: center; font-size: 14px; color: var(--text-muted); margin-top: 10px;">
+              Already registered? <a href="#" id="link-show-login" style="color: var(--primary-color); text-decoration: none; font-weight: 600;">Sign In Here</a>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 2. TEACHER DASHBOARD VIEW -->
+      <section class="app-view" id="view-teacher-dashboard">
+        <div class="view-header">
+          <div class="header-title-container">
+            <h1 class="view-title" id="teacher-dashboard-welcome">Welcome, Professor</h1>
+            <p class="view-subtitle">Manage subjects and generate academic question papers</p>
+          </div>
+          <button class="btn btn-primary" id="btn-dashboard-add-subject">
+            <i class="fa-solid fa-plus"></i> Add Subject
+          </button>
+        </div>
+
+        <!-- Dashboard Stats -->
+        <div class="stats-bar">
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-book"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-subjects-count">0</span>
+              <span class="stat-label">Subjects Managed</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-file-invoice"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-papers-count">0</span>
+              <span class="stat-label">Generated Papers</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-file-signature"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-ut-count">0</span>
+              <span class="stat-label">Unit Tests Generated</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="stat-semester-count">0</span>
+              <span class="stat-label">Semester Exams</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subjects Section -->
+        <div>
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">Active Subjects</h2>
+          <div class="card-grid" id="teacher-subjects-grid">
+            <!-- Dynamic Subject Cards Injected Here -->
+          </div>
+        </div>
+
+        <!-- Recent Question Papers Section -->
+        <div>
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">Recent Question Papers</h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Paper Title</th>
+                  <th>Subject Code</th>
+                  <th>Exam Type</th>
+                  <th>Total Marks</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="recent-papers-tbody">
+                <!-- Dynamic recent papers table row entries -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. SUBJECT WORKSPACE VIEW -->
+      <section class="app-view" id="view-subject-workspace">
+        <div class="view-header">
+          <div class="header-title-container">
+            <div class="breadcrumbs">
+              <span class="breadcrumb-link" id="breadcrumb-subjects">Subjects</span>
+              <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+              <span id="breadcrumb-subject-code">ML101</span>
+            </div>
+            <h1 class="view-title" id="subject-workspace-title">Machine Learning</h1>
+            <p class="view-subtitle" id="subject-workspace-subtitle">Semester V • Code: ML101</p>
+          </div>
+          <button class="btn btn-secondary" id="btn-workspace-back">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+          </button>
+        </div>
+
+        <!-- API Warning Banner if Gemini API is missing -->
+        <div class="api-warning-banner" id="gemini-warning-banner" style="display: none;">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size: 18px;"></i>
+          <div>
+            <strong>Gemini API Key Missing:</strong> You are currently running in Offline Template Mode. To enable real AI extraction and personalized question generation, please configure your <code>GEMINI_API_KEY</code> in <code>config.js</code>.
+          </div>
+        </div>
+
+        <!-- Subject Tabs -->
+        <div class="tab-container">
+          <div class="tab-nav">
+            <button class="tab-btn active-tab" data-tab="tab-materials">Study Materials & AI Insights</button>
+            <button class="tab-btn" data-tab="tab-generate">Generate Question Paper</button>
+            <button class="tab-btn" data-tab="tab-archive">Paper Archive</button>
+          </div>
+
+          <!-- TAB 1: STUDY MATERIALS & AI INSIGHTS -->
+          <div class="tab-content active-content" id="tab-materials">
+            <div class="upload-zone" id="material-drag-drop-zone">
+              <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+              <h3 class="upload-title">Drag & Drop Notes, Study Materials or Previous Papers</h3>
+              <p class="upload-subtitle">Supports PDF, DOCX, PPT, or TXT (Max 15MB)</p>
+              <input type="file" id="upload-file-input" style="display: none;" multiple>
+              <button class="btn btn-secondary" style="margin-top: 16px;" onclick="document.getElementById('upload-file-input').click()">Browse Files</button>
+            </div>
+
+            <div class="material-topic-grid" style="margin-top: 32px;">
+              <!-- Uploaded Materials List -->
+              <div class="list-container">
+                <div class="list-header">
+                  <span>Uploaded Documents</span>
+                  <span class="badge badge-info" id="badge-materials-count">0 Files</span>
+                </div>
+                <div id="uploaded-materials-list" style="display: flex; flex-direction: column; gap: 8px;">
+                  <!-- Dynamic materials file item list row entries -->
+                </div>
+              </div>
+
+              <!-- AI Extracted Concepts/Topics -->
+              <div class="list-container">
+                <div class="list-header">
+                  <span>AI-Extracted Key Topics</span>
+                  <span class="badge badge-success" id="badge-topics-count">0 Topics</span>
+                </div>
+                <div id="ai-topics-container" class="tag-cloud">
+                  <!-- Dynamic topics checklist tags -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: GENERATE QUESTION PAPER -->
+          <div class="tab-content" id="tab-generate">
+            <div class="glass-card" style="max-width: 720px; margin: 0 auto;">
+              <form id="form-paper-generation-settings">
+                
+                <div class="form-group">
+                  <label class="form-label">Select Exam Type</label>
+                  <select class="form-control" id="generator-exam-type" required>
+                    <option value="unit_test">Unit Test (20 Marks)</option>
+                    <option value="semester">Semester Examination (60 Marks)</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Paper Model Code</label>
+                  <select class="form-control" id="generator-model-code" required>
+                    <option value="Model 123">Model 123</option>
+                    <option value="Model 124">Model 124</option>
+                    <option value="Model 125">Model 125</option>
+                    <option value="Custom Model">Custom Model</option>
+                  </select>
+                </div>
+
+                <!-- UNIT TEST CONFIGURATION CONTAINER -->
+                <div id="ut-generator-config">
+                  <div class="form-group">
+                    <label class="form-label">Marking Scheme Split (Sum must equal 20)</label>
+                    <input type="text" class="form-control" id="ut-marking-scheme" value="8 + 7 + 5" placeholder="e.g. 8+7+5">
+                    <p class="upload-subtitle" style="margin-top: 4px;">Validates matching sum total of 20 marks</p>
+                  </div>
+                  
+                  <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-top: 16px;">
+                    <h4 style="margin-bottom: 8px; font-size: 14px;">UT Choice Structure Preset:</h4>
+                    <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
+                      - <strong>Question 1:</strong> Q1A OR Q1B (carrying 8 marks)<br>
+                      - <strong>Question 2:</strong> Q2A OR Q2B (carrying 7 marks)<br>
+                      - <strong>Question 3:</strong> Q3A OR Q3B (carrying 5 marks)
+                    </p>
+                  </div>
+                </div>
+
+                <!-- SEMESTER EXAMINATION CONFIGURATION CONTAINER -->
+                <div id="semester-generator-config" style="display: none;">
+                  <div class="form-group">
+                    <label class="form-label">Number of Questions</label>
+                    <input type="number" class="form-control" id="sem-num-questions" min="1" max="10" value="5" required>
+                  </div>
+                  
+                  <div class="form-group">
+                    <label class="form-label">Marks Per Question (Total sum must equal 60)</label>
+                    <input type="number" class="form-control" id="sem-marks-per-question" min="1" max="60" value="12" required>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Choice Structure Pattern</label>
+                    <select class="form-control" id="sem-choice-type" required>
+                      <option value="one_out_of_two">One Out of Two (Q(N)A OR Q(N)B)</option>
+                      <option value="two_out_of_three">Two Out of Three (Answer any two of Q(N)A, B, C)</option>
+                      <option value="one_out_of_three">One Out of Three (Answer any one of Q(N)A, B, C)</option>
+                      <option value="none">No Choice (Direct mandatory questions)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 24px;">
+                  <label class="form-label">Verify Selected Generation Topics</label>
+                  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ensure at least 2 topics are selected in the 'Study Materials' tab to generate balanced syllabus coverage.</p>
+                  <div id="generator-selected-topics-list" style="font-size: 13px; color: var(--text-secondary); font-style: italic;">
+                    No topics selected.
+                  </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 24px; padding: 14px;">
+                  <i class="fa-solid fa-bolt"></i> Generate Question Paper
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- TAB 3: SUBJECT ARCHIVE -->
+          <div class="tab-content" id="tab-archive">
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Paper Title</th>
+                    <th>Exam Type</th>
+                    <th>Total Marks</th>
+                    <th>Created Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="subject-archive-tbody">
+                  <!-- Dynamic subject specific archives -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. REVIEW & EDIT VIEW -->
+      <section class="app-view" id="view-review-edit">
+        <div class="view-header">
+          <div class="header-title-container">
+            <div class="breadcrumbs">
+              <span class="breadcrumb-link" id="review-breadcrumb-dashboard">Dashboard</span>
+              <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+              <span class="breadcrumb-link" id="review-breadcrumb-subject">Machine Learning</span>
+              <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+              <span>Review Paper</span>
+            </div>
+            <h1 class="view-title">Review Generated Paper</h1>
+            <p class="view-subtitle">Review questions, edit content, and export layout formats</p>
+          </div>
+          <button class="btn btn-secondary" id="btn-review-back-to-subject">
+            <i class="fa-solid fa-circle-chevron-left"></i> Return to Subject
+          </button>
+        </div>
+
+        <div class="review-split">
+          
+          <!-- PAPER PREVIEW LAYOUT -->
+          <div class="exam-layout-card">
+            <div class="academic-paper" id="paper-academic-rendering-area">
+              <!-- Academic Question Paper template rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- ACTION CONTROLS PANEL -->
+          <div class="review-controls-panel">
+            <div class="glass-card" style="display: flex; flex-direction: column; gap: 16px;">
+              <h3 style="font-family: var(--font-display); font-size: 18px; font-weight: 600;">Paper Details</h3>
+              <div style="font-size: 14px; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+                <div><strong>Subject:</strong> <span id="review-info-subject">Machine Learning</span></div>
+                <div><strong>Exam:</strong> <span id="review-info-exam">Semester Examination</span></div>
+                <div><strong>Marks:</strong> <span id="review-info-marks">60 Marks</span></div>
+                <div><strong>Model:</strong> <span id="review-info-model">Model 123</span></div>
+              </div>
+            </div>
+
+            <div class="glass-card" style="display: flex; flex-direction: column; gap: 12px;">
+              <h3 style="font-family: var(--font-display); font-size: 18px; font-weight: 600; margin-bottom: 4px;">Operations</h3>
+              <button class="btn btn-primary" id="btn-review-save-to-database">
+                <i class="fa-solid fa-floppy-disk"></i> Save Paper to Archive
+              </button>
+              <button class="btn btn-secondary" id="btn-review-print-pdf">
+                <i class="fa-solid fa-file-pdf" style="color: var(--danger-color);"></i> Export PDF (Print)
+              </button>
+              <button class="btn btn-secondary" id="btn-review-export-docx">
+                <i class="fa-solid fa-file-word" style="color: var(--info-color);"></i> Export Word (DOC)
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 5. HOD DASHBOARD VIEW -->
+      <section class="app-view" id="view-hod-dashboard">
+        <div class="view-header">
+          <div class="header-title-container">
+            <h1 class="view-title">Academic Department Dashboard</h1>
+            <p class="view-subtitle">Monitor faculty, generated question papers, and track statistics</p>
+          </div>
+        </div>
+
+        <!-- HOD Stat Summary Cards -->
+        <div class="stats-bar">
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="hod-stat-teachers">0</span>
+              <span class="stat-label">Total Faculty Members</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-book-open"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="hod-stat-subjects">0</span>
+              <span class="stat-label">Subjects Tracked</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="hod-stat-papers">0</span>
+              <span class="stat-label">Total Generated Papers</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-chart-pie"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="hod-stat-ratio">0%</span>
+              <span class="stat-label">UT to Sem Exam Ratio</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Teachers Directory Section -->
+        <div>
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">Registered Department Teachers</h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Teacher Name</th>
+                  <th>Email</th>
+                  <th>Assigned Subjects</th>
+                  <th>Generated Papers</th>
+                </tr>
+              </thead>
+              <tbody id="hod-teachers-tbody">
+                <!-- Dynamic teachers listings row entries -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Departmental Papers Archive Section -->
+        <div>
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Departmental Generated Papers</h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Paper Title</th>
+                  <th>Subject</th>
+                  <th>Faculty Instructor</th>
+                  <th>Exam Type</th>
+                  <th>Total Marks</th>
+                  <th>Created Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="hod-papers-tbody">
+                <!-- Dynamic departmental papers database lists -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- LOADING & GENERATION SPINNER OVERLAY -->
+    <div class="loader-overlay" id="loading-overlay">
+      <div class="spinner"></div>
+      <div class="loader-status-list" id="loading-overlay-steps">
+        <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 700;">Processing Data</h2>
+        <div class="loader-step active" id="step-loader-1">Analyzing inputs...</div>
+        <div class="loader-step" id="step-loader-2">Structuring layout...</div>
+        <div class="loader-step" id="step-loader-3">Polishing final questions...</div>
+      </div>
+    </div>
+
+    <!-- DIALOG MODALS -->
+    
+    <!-- ADD SUBJECT DIALOG -->
+    <div class="modal-overlay" id="modal-add-subject">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 class="modal-title">Add New Subject</h3>
+          <button class="modal-close" id="btn-close-modal-add-subject">&times;</button>
+        </div>
+        <form id="form-add-subject">
+          <div class="form-group">
+            <label class="form-label">Subject Name</label>
+            <input type="text" class="form-control" id="modal-subject-name" required placeholder="e.g. Machine Learning">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Subject Code</label>
+            <input type="text" class="form-control" id="modal-subject-code" required placeholder="e.g. ML101">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Semester</label>
+            <input type="text" class="form-control" id="modal-subject-semester" required placeholder="e.g. V">
+          </div>
+          <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-modal-add-subject">Cancel</button>
+            <button type="submit" class="btn btn-primary">Create Subject</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-container" id="toast-messages-container">
+      <!-- Toasts dynamically appended here -->
+    </div>
+
+  </div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script src="config.js"></script>
+  <script src="database.js"></script>
+  <script src="ai_engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

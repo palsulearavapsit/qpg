@@ -1,0 +1,8 @@
+# Environment credentials (contains secret API keys)
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.local
