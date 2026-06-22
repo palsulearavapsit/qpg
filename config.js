@@ -5,8 +5,30 @@ const CONFIG = {
   GEMINI_API_KEY: "your-gemini-api-key-here"
 };
 
-// Dynamically fetch and parse the .env file if running on a local development server
+// Dynamically fetch configuration from serverless environment or local .env file
 async function loadEnvironment() {
+  // 1. Try to load from Vercel Serverless Function first (Production)
+  try {
+    const apiResponse = await fetch('/api/config');
+    if (apiResponse.ok) {
+      const data = await apiResponse.json();
+      let keysUpdated = 0;
+      Object.keys(data).forEach(key => {
+        if (data[key] && CONFIG.hasOwnProperty(key)) {
+          CONFIG[key] = data[key];
+          keysUpdated++;
+        }
+      });
+      if (keysUpdated > 0) {
+        console.log("Configuration loaded successfully from Vercel environment variables.");
+        return; // Success, skip loading local .env
+      }
+    }
+  } catch (apiError) {
+    console.log("Serverless config endpoint '/api/config' not accessible. Trying local .env...");
+  }
+
+  // 2. Fall back to parsing local .env file (Local Development)
   try {
     const response = await fetch('.env');
     if (response.ok) {
@@ -25,10 +47,10 @@ async function loadEnvironment() {
           CONFIG[key] = value;
         }
       });
-      console.log("Configuration successfully overridden from .env");
+      console.log("Configuration successfully overridden from local .env");
     }
   } catch (error) {
-    console.log("Local .env could not be loaded via fetch (e.g. running directly via file:// protocol). Using hardcoded config.js variables.");
+    console.log("Local .env could not be loaded via fetch. Using hardcoded config.js variables.");
   }
 }
 window.CONFIG = CONFIG;
