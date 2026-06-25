@@ -6,3 +6,5 @@
 Thumbs.db
 desktop.ini
 *.local
+*.sql
+/node_modules
