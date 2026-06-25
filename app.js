@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     if (configured) {
       const session = await DatabaseService.getCurrentUser();
-      if (session) {
+      if (session && session.profile) {
         State.currentUser = session.user;
         State.currentProfile = session.profile;
         showToast(`Logged in as ${State.currentProfile.name}`, 'success');
@@ -49,6 +49,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           navigateTo('view-teacher-dashboard');
         }
       } else {
+        if (session) {
+          // If session exists but profile is deleted from db, sign out to clear session
+          await DatabaseService.signOut();
+        }
         navigateTo('view-auth');
       }
     } else {
@@ -160,6 +164,14 @@ function setupEventListeners() {
       const response = await DatabaseService.signIn(email, password);
       State.currentUser = response.user;
       State.currentProfile = response.profile;
+      
+      if (!State.currentProfile) {
+        showToast("Profile details not found. Please sign up to register.", "error");
+        await DatabaseService.signOut();
+        State.currentUser = null;
+        return;
+      }
+      
       showToast(`Welcome back, ${State.currentProfile.name}!`, "success");
       setupSidebar();
       
