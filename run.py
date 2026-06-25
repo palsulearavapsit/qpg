@@ -5,6 +5,7 @@ import webbrowser
 import threading
 import sys
 import time
+import socket
 
 PORT = 8000
 HOST = "127.0.0.1"

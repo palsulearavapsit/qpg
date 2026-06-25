@@ -149,6 +149,12 @@ function setupEventListeners() {
     const email = document.getElementById("login-email").value;
     const password = document.getElementById("login-password").value;
 
+    // Enforce email domain restriction
+    if (!email.toLowerCase().endsWith("@apsit.edu.in")) {
+      showToast("Only email addresses ending with '@apsit.edu.in' are allowed.", "error");
+      return;
+    }
+
     showLoader(true, "Authenticating...");
     try {
       const response = await DatabaseService.signIn(email, password);
@@ -177,6 +183,12 @@ function setupEventListeners() {
     const email = document.getElementById("signup-email").value;
     const password = document.getElementById("signup-password").value;
     const role = document.getElementById("signup-role").value;
+
+    // Enforce email domain restriction
+    if (!email.toLowerCase().endsWith("@apsit.edu.in")) {
+      showToast("Only email addresses ending with '@apsit.edu.in' are allowed.", "error");
+      return;
+    }
 
     showLoader(true, "Creating account...");
     try {
