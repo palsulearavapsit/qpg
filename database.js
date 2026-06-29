@@ -83,6 +83,58 @@ const DatabaseService = {
   async signIn(email, password) {
     if (!isDbConfigured()) throw new Error("Supabase is not configured. Please fill config.js with valid credentials.");
     
+    // 1. Look up profile in database table (which HOD may have created)
+    let dbProfile = null;
+    try {
+      const { data } = await supabaseClient
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .maybeSingle();
+      dbProfile = data;
+    } catch (e) {
+      console.warn("Failed to check profiles table prior to auth:", e);
+    }
+    
+    // 2. If user exists in db table and has matching password
+    if (dbProfile && dbProfile.password_text === password) {
+      try {
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+        if (!error && data.user) {
+          // Sync auth user id to profile table if they mismatched
+          if (dbProfile.id !== data.user.id) {
+            await supabaseClient.from('profiles').update({ id: data.user.id }).eq('email', email);
+            dbProfile.id = data.user.id;
+          }
+          if (data.user.user_metadata) {
+            dbProfile.username = dbProfile.username || data.user.user_metadata.username || "";
+            dbProfile.profile_picture = dbProfile.profile_picture || data.user.user_metadata.profile_picture || "";
+            dbProfile.description = dbProfile.description || data.user.user_metadata.description || "";
+          }
+          return { user: data.user, profile: dbProfile };
+        }
+      } catch (authErr) {
+        // Auth doesn't exist, let's auto-register them
+        try {
+          const { data: signUpData, error: signUpErr } = await supabaseClient.auth.signUp({
+            email: email,
+            password: password
+          });
+          if (!signUpErr && signUpData.user) {
+            await supabaseClient.from('profiles').update({ id: signUpData.user.id }).eq('email', email);
+            dbProfile.id = signUpData.user.id;
+            return { user: signUpData.user, profile: dbProfile };
+          }
+        } catch (signupErr) {
+          console.error("Auto signup fail:", signupErr);
+        }
+      }
+    }
+
+    // Standard fallback login
     const { data, error } = await supabaseClient.auth.signInWithPassword({
       email: email,
       password: password
@@ -455,6 +507,92 @@ const DatabaseService = {
       if (authError) throw authError;
     }
     
+    return true;
+  },
+
+  async addUser(name, email, password, role) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    
+    // Generate a temporary UUID for the profiles insert
+    const tempId = 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+    
+    const insertObj = {
+      id: tempId,
+      name: name,
+      email: email,
+      role: role,
+      password_text: password,
+      created_at: new Date().toISOString()
+    };
+    
+    const { error } = await supabaseClient
+      .from('profiles')
+      .insert([insertObj]);
+      
+    if (error) {
+      // Fallback in case password_text column doesn't exist
+      const { error: fallbackError } = await supabaseClient
+        .from('profiles')
+        .insert([{
+          id: tempId,
+          name: name,
+          email: email,
+          role: role,
+          created_at: new Date().toISOString()
+        }]);
+      if (fallbackError) throw fallbackError;
+    }
+    
+    return true;
+  },
+
+  async updateUser(userId, name, email, password, role) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    
+    const updateObj = { name, email, role, password_text: password };
+    
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update(updateObj)
+      .eq('id', userId);
+      
+    if (error) {
+      // Fallback in case password_text column doesn't exist
+      const { error: fallbackError } = await supabaseClient
+        .from('profiles')
+        .update({ name, email, role })
+        .eq('id', userId);
+      if (fallbackError) throw fallbackError;
+    }
+    
+    return true;
+  },
+
+  async deleteUserCascading(userId) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    
+    // 1. Find all subjects belonging to this teacher
+    const { data: subjects } = await supabaseClient
+      .from('subjects')
+      .select('id')
+      .eq('teacher_id', userId);
+      
+    if (subjects && subjects.length > 0) {
+      for (const sub of subjects) {
+        // Cascade delete this subject's papers & materials first
+        await supabaseClient.from('papers').delete().eq('subject_id', sub.id);
+        await supabaseClient.from('materials').delete().eq('subject_id', sub.id);
+        await supabaseClient.from('subjects').delete().eq('id', sub.id);
+      }
+    }
+    
+    // 2. Delete user profile row
+    const { error } = await supabaseClient
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+      
+    if (error) throw error;
     return true;
   }
 };

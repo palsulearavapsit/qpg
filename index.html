@@ -426,17 +426,24 @@
         </div>
 
         <!-- Teachers Directory Section -->
-        <div>
-          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">Registered Department Teachers</h2>
+        <div style="margin-top: 32px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0;">Registered Department Users</h2>
+            <button class="btn btn-primary" onclick="openAddUserModal()">
+              <i class="fa-solid fa-user-plus"></i> Add New User
+            </button>
+          </div>
           <div class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Teacher Name</th>
+                  <th>User Name</th>
                   <th>Email</th>
+                  <th>Role</th>
                   <th>Password Credential</th>
                   <th>Assigned Subjects</th>
                   <th>Generated Papers</th>
+                  <th style="text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody id="hod-teachers-tbody">
@@ -635,6 +642,50 @@
             <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
               <button type="button" class="btn btn-secondary" onclick="closeProfileSettingsModal()">Cancel</button>
               <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOD MANAGE USER MODAL -->
+    <div class="modal-overlay" id="modal-manage-user" style="display: none;">
+      <div class="glass-card modal-card" style="max-width: 500px; width: 100%;">
+        <div class="modal-header">
+          <h2 class="modal-title" id="manage-user-modal-title"><i class="fa-solid fa-user-plus" style="color: var(--primary-color); margin-right: 8px;"></i> Add New User</h2>
+          <button class="modal-close" onclick="closeManageUserModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="modal-body" style="padding-top: 10px;">
+          <form id="form-manage-user" onsubmit="saveUserWorkflow(event)">
+            <input type="hidden" id="manage-user-id" value="">
+            
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="manage-user-name" required placeholder="Professor John Doe">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-control" id="manage-user-email" required placeholder="name@apsit.edu.in" pattern="[a-zA-Z0-9._%+-]+@apsit\.edu\.in" title="Please enter an email ending with @apsit.edu.in">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="text" class="form-control" id="manage-user-password" required placeholder="faculty123" minlength="6">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Role</label>
+              <select class="form-control" id="manage-user-role" required>
+                <option value="teacher">Faculty / Teacher</option>
+                <option value="hod">HOD (Head of Department)</option>
+              </select>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+              <button type="button" class="btn btn-secondary" onclick="closeManageUserModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="btn-save-manage-user">Add User</button>
             </div>
           </form>
         </div>

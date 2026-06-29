@@ -1456,7 +1456,7 @@ async function renderHODDashboard() {
   const teachersTbody = document.getElementById("hod-teachers-tbody");
   const papersTbody = document.getElementById("hod-papers-tbody");
 
-  teachersTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading teachers directory...</td></tr>`;
+  teachersTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading teachers directory...</td></tr>`;
   papersTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading department papers...</td></tr>`;
 
   try {
@@ -1471,7 +1471,7 @@ async function renderHODDashboard() {
     // 2. Fetch Teachers Directory List
     const teachersList = await DatabaseService.getTeachersList();
     if (teachersList.length === 0) {
-      teachersTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No teachers registered yet.</td></tr>`;
+      teachersTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No teachers registered yet.</td></tr>`;
     } else {
       teachersTbody.innerHTML = teachersList.map(teacher => {
         const subsText = teacher.subjects.length > 0 
@@ -1482,13 +1482,24 @@ async function renderHODDashboard() {
           ? `<code style="background: var(--bg-surface-opaque); padding: 4px 8px; border-radius: var(--radius-sm); font-size: 13px; border: 1px solid var(--border-color);">${teacher.password_text}</code>` 
           : `<span style="color: var(--text-muted); font-style: italic;">Not Available</span>`;
         
+        const roleBadge = teacher.role === 'hod' 
+          ? `<span class="badge badge-info">HOD</span>` 
+          : `<span class="badge badge-success">Faculty</span>`;
+        
         return `
           <tr>
             <td><strong>${teacher.name}</strong></td>
             <td>${teacher.email}</td>
+            <td>${roleBadge}</td>
             <td>${pwdText}</td>
             <td>${subsText}</td>
             <td><strong>${teacher.papersCount}</strong> papers generated</td>
+            <td>
+              <div class="item-actions" style="justify-content: flex-end;">
+                <button class="btn btn-icon-sm" title="Edit User" onclick="openEditUserModal('${teacher.id}', '${teacher.name.replace(/'/g, "\\'")}', '${teacher.email}', '${(teacher.password_text || '').replace(/'/g, "\\'")}', '${teacher.role}')"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button class="btn btn-icon-sm btn-danger" title="Delete User" onclick="deleteUserWorkflow('${teacher.id}')"><i class="fa-solid fa-trash"></i></button>
+              </div>
+            </td>
           </tr>
         `;
       }).join("");
@@ -1819,4 +1830,91 @@ async function saveProfileSettingsWorkflow(event) {
   }
 }
 window.saveProfileSettingsWorkflow = saveProfileSettingsWorkflow;
+
+// --- HOD USER MANAGEMENT ACTIONS ---
+function openAddUserModal() {
+  document.getElementById("manage-user-modal-title").innerHTML = `<i class="fa-solid fa-user-plus" style="color: var(--primary-color); margin-right: 8px;"></i> Add New User`;
+  document.getElementById("btn-save-manage-user").innerText = "Add User";
+  
+  document.getElementById("manage-user-id").value = "";
+  document.getElementById("manage-user-name").value = "";
+  document.getElementById("manage-user-email").value = "";
+  document.getElementById("manage-user-email").disabled = false;
+  document.getElementById("manage-user-password").value = "";
+  document.getElementById("manage-user-role").value = "teacher";
+  
+  document.getElementById("modal-manage-user").style.display = "flex";
+}
+window.openAddUserModal = openAddUserModal;
+
+function openEditUserModal(userId, name, email, password, role) {
+  document.getElementById("manage-user-modal-title").innerHTML = `<i class="fa-solid fa-user-pen" style="color: var(--primary-color); margin-right: 8px;"></i> Edit User Details`;
+  document.getElementById("btn-save-manage-user").innerText = "Save Changes";
+  
+  document.getElementById("manage-user-id").value = userId;
+  document.getElementById("manage-user-name").value = name;
+  document.getElementById("manage-user-email").value = email;
+  document.getElementById("manage-user-email").disabled = true; // Email is key primary identifier
+  document.getElementById("manage-user-password").value = password;
+  document.getElementById("manage-user-role").value = role;
+  
+  document.getElementById("modal-manage-user").style.display = "flex";
+}
+window.openEditUserModal = openEditUserModal;
+
+function closeManageUserModal() {
+  document.getElementById("modal-manage-user").style.display = "none";
+}
+window.closeManageUserModal = closeManageUserModal;
+
+async function saveUserWorkflow(event) {
+  event.preventDefault();
+  
+  const userId = document.getElementById("manage-user-id").value;
+  const name = document.getElementById("manage-user-name").value.trim();
+  const email = document.getElementById("manage-user-email").value.trim();
+  const password = document.getElementById("manage-user-password").value;
+  const role = document.getElementById("manage-user-role").value;
+  
+  // Enforce email restriction
+  if (!email.toLowerCase().endsWith("@apsit.edu.in")) {
+    alert("Only email addresses ending with '@apsit.edu.in' are allowed.");
+    return;
+  }
+  
+  showLoader(true, userId ? "Saving changes..." : "Creating user...");
+  try {
+    if (userId) {
+      await DatabaseService.updateUser(userId, name, email, password, role);
+    } else {
+      await DatabaseService.addUser(name, email, password, role);
+    }
+    closeManageUserModal();
+    await renderHODDashboard();
+  } catch (error) {
+    console.error("Failed to manage user:", error);
+    alert(error.message || "Operation failed.");
+  } finally {
+    showLoader(false);
+  }
+}
+window.saveUserWorkflow = saveUserWorkflow;
+
+async function deleteUserWorkflow(userId) {
+  if (userId === State.currentUser.id) {
+    alert("You cannot delete your own account!");
+    return;
+  }
+  
+  showLoader(true, "Deleting user and cascading materials...");
+  try {
+    await DatabaseService.deleteUserCascading(userId);
+    await renderHODDashboard();
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+  } finally {
+    showLoader(false);
+  }
+}
+window.deleteUserWorkflow = deleteUserWorkflow;
 
