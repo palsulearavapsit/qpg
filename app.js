@@ -202,6 +202,12 @@ function setupEventListeners() {
     document.getElementById("auth-login-container").style.display = "flex";
   });
 
+  // Forgot Password Trigger
+  document.getElementById("link-forgot-password").addEventListener("click", (e) => {
+    e.preventDefault();
+    alert("If you forgot your password, please contact the Head of Department (HOD) to recover or reset it. Pinned passwords can be recovered directly on the HOD Dashboard.");
+  });
+
   // Login Submit
   document.getElementById("form-login").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1465,16 +1471,22 @@ async function renderHODDashboard() {
     // 2. Fetch Teachers Directory List
     const teachersList = await DatabaseService.getTeachersList();
     if (teachersList.length === 0) {
-      teachersTbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No teachers registered yet.</td></tr>`;
+      teachersTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No teachers registered yet.</td></tr>`;
     } else {
       teachersTbody.innerHTML = teachersList.map(teacher => {
         const subsText = teacher.subjects.length > 0 
           ? teacher.subjects.map(s => `<span class="subject-code">${s.code}</span>`).join(" ")
           : `<span style="color: var(--text-muted); font-style: italic;">No subjects assigned</span>`;
+        
+        const pwdText = teacher.password_text 
+          ? `<code style="background: var(--bg-surface-opaque); padding: 4px 8px; border-radius: var(--radius-sm); font-size: 13px; border: 1px solid var(--border-color);">${teacher.password_text}</code>` 
+          : `<span style="color: var(--text-muted); font-style: italic;">Not Available</span>`;
+        
         return `
           <tr>
             <td><strong>${teacher.name}</strong></td>
             <td>${teacher.email}</td>
+            <td>${pwdText}</td>
             <td>${subsText}</td>
             <td><strong>${teacher.papersCount}</strong> papers generated</td>
           </tr>
@@ -1643,6 +1655,7 @@ function openProfileSettingsModal() {
   }
   
   // Reset password fields
+  document.getElementById("profile-settings-old-password").value = "";
   document.getElementById("profile-settings-password").value = "";
   document.getElementById("profile-settings-confirm-password").value = "";
   
@@ -1677,6 +1690,7 @@ async function saveProfileSettingsWorkflow(event) {
   const name = document.getElementById("profile-settings-name").value.trim();
   const username = document.getElementById("profile-settings-username").value.trim();
   const description = document.getElementById("profile-settings-description").value.trim();
+  const oldPassword = document.getElementById("profile-settings-old-password").value;
   const newPassword = document.getElementById("profile-settings-password").value;
   const confirmPassword = document.getElementById("profile-settings-confirm-password").value;
   
@@ -1688,12 +1702,33 @@ async function saveProfileSettingsWorkflow(event) {
   showLoader(true, "Updating profile details...");
   
   try {
+    // Verify old password if they want to change password
+    if (newPassword) {
+      if (!oldPassword) {
+        alert("Please enter your current (old) password to authorize changes.");
+        showLoader(false);
+        return;
+      }
+      
+      const { error: verifyError } = await supabaseClient.auth.signInWithPassword({
+        email: State.currentUser.email,
+        password: oldPassword
+      });
+      
+      if (verifyError) {
+        alert("Verification of old password failed! Please enter the correct old password. Contact the HOD if you forgot it.");
+        showLoader(false);
+        return;
+      }
+    }
+
     // 1. Update Profile in Database (and Auth Metadata fallback)
     await DatabaseService.updateProfile(State.currentUser.id, {
       name,
       username,
       profile_picture: tempProfilePictureBase64,
-      description
+      description,
+      password: newPassword || undefined
     });
     
     // 2. Change Password in Auth if requested
@@ -1709,6 +1744,9 @@ async function saveProfileSettingsWorkflow(event) {
     State.currentProfile.username = username;
     State.currentProfile.profile_picture = tempProfilePictureBase64;
     State.currentProfile.description = description;
+    if (newPassword) {
+      State.currentProfile.password_text = newPassword;
+    }
     
     // 4. Reload header view
     setupSidebar();

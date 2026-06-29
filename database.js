@@ -42,21 +42,39 @@ const DatabaseService = {
     if (!authData.user) throw new Error("Sign up failed: User registration returned null.");
 
     // 2. Insert user profile into the profiles table
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .insert([
-        { 
-          id: authData.user.id, 
-          name: name, 
-          email: email, 
-          role: role,
-          created_at: new Date().toISOString()
-        }
-      ]);
+    let profileError = null;
+    try {
+      const { error } = await supabaseClient
+        .from('profiles')
+        .insert([
+          { 
+            id: authData.user.id, 
+            name: name, 
+            email: email, 
+            role: role,
+            password_text: password,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      profileError = error;
+    } catch (err) {
+      profileError = err;
+    }
       
     if (profileError) {
-      console.error("Failed to create profile, but auth user was created:", profileError);
-      throw profileError;
+      console.warn("Failed to create profile with password_text, trying standard schema:", profileError);
+      const { error: fallbackError } = await supabaseClient
+        .from('profiles')
+        .insert([
+          { 
+            id: authData.user.id, 
+            name: name, 
+            email: email, 
+            role: role,
+            created_at: new Date().toISOString()
+          }
+        ]);
+      if (fallbackError) throw fallbackError;
     }
     
     return authData.user;
@@ -367,35 +385,60 @@ const DatabaseService = {
     };
   },
 
-  async updateProfile(userId, { name, username, profile_picture, description }) {
+  async updateProfile(userId, { name, username, profile_picture, description, password }) {
     if (!isDbConfigured()) throw new Error("Database not connected.");
     
     // 1. Update profiles table name (guaranteed to exist)
-    const { error: profileError } = await supabaseClient
-      .from('profiles')
-      .update({ name })
-      .eq('id', userId);
+    try {
+      const updateData = { name };
+      if (password) updateData.password_text = password;
       
-    if (profileError) throw profileError;
+      const { error: profileError } = await supabaseClient
+        .from('profiles')
+        .update(updateData)
+        .eq('id', userId);
+        
+      if (profileError) {
+        // Fallback to updating just name
+        const { error: nameError } = await supabaseClient
+          .from('profiles')
+          .update({ name })
+          .eq('id', userId);
+        if (nameError) throw nameError;
+      }
+    } catch (e) {
+      const { error: nameError } = await supabaseClient
+        .from('profiles')
+        .update({ name })
+        .eq('id', userId);
+      if (nameError) throw nameError;
+    }
     
     // 2. Try updating extra columns in profiles table. If column does not exist, catch error and store in User Metadata
     try {
+      const extraUpdates = { username, profile_picture, description };
+      if (password) extraUpdates.password_text = password;
+      
       const { error: extraError } = await supabaseClient
         .from('profiles')
-        .update({ username, profile_picture, description })
+        .update(extraUpdates)
         .eq('id', userId);
         
       if (extraError) {
         // Fallback to Auth metadata
+        const metadata = { username, profile_picture, description };
+        if (password) metadata.password_text = password;
         const { error: authError } = await supabaseClient.auth.updateUser({
-          data: { username, profile_picture, description }
+          data: metadata
         });
         if (authError) throw authError;
       }
     } catch (e) {
       // Fallback to Auth metadata
+      const metadata = { username, profile_picture, description };
+      if (password) metadata.password_text = password;
       const { error: authError } = await supabaseClient.auth.updateUser({
-        data: { username, profile_picture, description }
+        data: metadata
       });
       if (authError) throw authError;
     }
