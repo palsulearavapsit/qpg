@@ -100,6 +100,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.addEventListener("click", () => {
     document.querySelectorAll(".subject-options-dropdown").forEach(el => {
       el.style.display = "none";
+      const card = el.closest(".subject-card");
+      if (card) card.style.zIndex = "";
     });
   });
 });
@@ -1534,12 +1536,21 @@ function toggleSubjectOptions(event, subjectId) {
   document.querySelectorAll(".subject-options-dropdown").forEach(el => {
     if (el.id !== `dropdown-${subjectId}`) {
       el.style.display = "none";
+      const card = el.closest(".subject-card");
+      if (card) card.style.zIndex = "";
     }
   });
   
   const dropdown = document.getElementById(`dropdown-${subjectId}`);
   if (dropdown) {
-    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+    const card = dropdown.closest(".subject-card");
+    if (dropdown.style.display === "block") {
+      dropdown.style.display = "none";
+      if (card) card.style.zIndex = "";
+    } else {
+      dropdown.style.display = "block";
+      if (card) card.style.zIndex = "100"; // Raise active card z-index above siblings!
+    }
   }
 }
 window.toggleSubjectOptions = toggleSubjectOptions;
@@ -1557,6 +1568,14 @@ function pinSubject(event, subjectId) {
   }
   
   localStorage.setItem("pinned_subjects", JSON.stringify(pinned));
+  
+  const dropdown = document.getElementById(`dropdown-${subjectId}`);
+  if (dropdown) {
+    dropdown.style.display = "none";
+    const card = dropdown.closest(".subject-card");
+    if (card) card.style.zIndex = "";
+  }
+  
   renderTeacherDashboard();
 }
 window.pinSubject = pinSubject;
@@ -1574,6 +1593,13 @@ async function deleteSubjectWorkflow(event, subjectId) {
     if (idx > -1) {
       pinned.splice(idx, 1);
       localStorage.setItem("pinned_subjects", JSON.stringify(pinned));
+    }
+    
+    const dropdown = document.getElementById(`dropdown-${subjectId}`);
+    if (dropdown) {
+      dropdown.style.display = "none";
+      const card = dropdown.closest(".subject-card");
+      if (card) card.style.zIndex = "";
     }
     
     await renderTeacherDashboard();
