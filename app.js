@@ -1632,6 +1632,53 @@ window.deleteSubjectWorkflow = deleteSubjectWorkflow;
 
 // --- USER PROFILE SETTINGS CONTROLLER & HANDLERS ---
 let tempProfilePictureBase64 = null;
+let profilePicZoom = 1;
+
+function applyProfilePictureZoom(val) {
+  profilePicZoom = parseFloat(val);
+  const img = document.getElementById("profile-settings-preview");
+  if (img) {
+    img.style.transform = `scale(${profilePicZoom})`;
+  }
+  const slider = document.getElementById("profile-pic-zoom-slider");
+  if (slider) slider.value = val;
+}
+window.applyProfilePictureZoom = applyProfilePictureZoom;
+
+function adjustProfilePicZoom(delta) {
+  let newVal = profilePicZoom + delta;
+  newVal = Math.max(1, Math.min(3, newVal));
+  applyProfilePictureZoom(newVal);
+}
+window.adjustProfilePicZoom = adjustProfilePicZoom;
+
+function getCroppedProfilePictureBase64() {
+  const img = document.getElementById("profile-settings-preview");
+  if (!img || !tempProfilePictureBase64 || !tempProfilePictureBase64.startsWith("data:")) {
+    return tempProfilePictureBase64;
+  }
+  
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = 250;
+    canvas.height = 250;
+    const ctx = canvas.getContext("2d");
+    
+    const naturalWidth = img.naturalWidth || img.width || 250;
+    const naturalHeight = img.naturalHeight || img.height || 250;
+    const size = Math.min(naturalWidth, naturalHeight);
+    const srcSize = size / profilePicZoom;
+    
+    const srcX = (naturalWidth - srcSize) / 2;
+    const srcY = (naturalHeight - srcSize) / 2;
+    
+    ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 250, 250);
+    return canvas.toDataURL("image/jpeg", 0.90);
+  } catch (e) {
+    console.error("Failed to crop image, saving raw base64:", e);
+    return tempProfilePictureBase64;
+  }
+}
 
 function openProfileSettingsModal() {
   if (!State.currentUser || !State.currentProfile) return;
@@ -1653,6 +1700,8 @@ function openProfileSettingsModal() {
     const initials = profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     previewImg.src = `https://api.dicebear.com/7.x/initials/svg?seed=${initials}`;
   }
+  
+  applyProfilePictureZoom(1); // Reset zoom to default scale
   
   // Reset password fields
   document.getElementById("profile-settings-old-password").value = "";
@@ -1677,6 +1726,7 @@ function previewProfilePicture(event) {
   reader.onload = function(e) {
     tempProfilePictureBase64 = e.target.result;
     document.getElementById("profile-settings-preview").src = tempProfilePictureBase64;
+    applyProfilePictureZoom(1); // Reset zoom scale to default for new photo
   };
   reader.readAsDataURL(file);
 }
@@ -1722,11 +1772,14 @@ async function saveProfileSettingsWorkflow(event) {
       }
     }
 
+    // Get the cropped & zoomed pfp base64 string
+    const finalProfilePicture = getCroppedProfilePictureBase64();
+
     // 1. Update Profile in Database (and Auth Metadata fallback)
     await DatabaseService.updateProfile(State.currentUser.id, {
       name,
       username,
-      profile_picture: tempProfilePictureBase64,
+      profile_picture: finalProfilePicture,
       description,
       password: newPassword || undefined
     });
@@ -1739,10 +1792,16 @@ async function saveProfileSettingsWorkflow(event) {
       if (pwdError) throw pwdError;
     }
     
+    // Refresh local State.currentUser immediately from Supabase Auth so it is in sync
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (user) {
+      State.currentUser = user;
+    }
+    
     // 3. Update active states locally
     State.currentProfile.name = name;
     State.currentProfile.username = username;
-    State.currentProfile.profile_picture = tempProfilePictureBase64;
+    State.currentProfile.profile_picture = finalProfilePicture;
     State.currentProfile.description = description;
     if (newPassword) {
       State.currentProfile.password_text = newPassword;

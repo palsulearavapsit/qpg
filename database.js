@@ -93,6 +93,12 @@ const DatabaseService = {
     
     // Fetch profile to get role and details
     const profile = await this.getUserProfile(data.user.id);
+    if (profile && data.user.user_metadata) {
+      profile.username = profile.username || data.user.user_metadata.username || "";
+      profile.profile_picture = profile.profile_picture || data.user.user_metadata.profile_picture || "";
+      profile.description = profile.description || data.user.user_metadata.description || "";
+      profile.password_text = profile.password_text || data.user.user_metadata.password_text || "";
+    }
     return { user: data.user, profile };
   },
 
@@ -108,6 +114,12 @@ const DatabaseService = {
     if (!user) return null;
     
     const profile = await this.getUserProfile(user.id);
+    if (profile && user.user_metadata) {
+      profile.username = profile.username || user.user_metadata.username || "";
+      profile.profile_picture = profile.profile_picture || user.user_metadata.profile_picture || "";
+      profile.description = profile.description || user.user_metadata.description || "";
+      profile.password_text = profile.password_text || user.user_metadata.password_text || "";
+    }
     return { user, profile };
   },
 
