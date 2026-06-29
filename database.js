@@ -594,6 +594,82 @@ const DatabaseService = {
       
     if (error) throw error;
     return true;
+  },
+
+  // --- PASSWORD RESET REQUESTS ---
+
+  async submitPasswordRequest(email, name) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    const { error } = await supabaseClient
+      .from('password_requests')
+      .insert([{
+        teacher_email: email,
+        teacher_name: name,
+        status: 'pending',
+        requested_at: new Date().toISOString()
+      }]);
+    if (error) throw error;
+    return true;
+  },
+
+  async getPasswordRequests() {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    const { data, error } = await supabaseClient
+      .from('password_requests')
+      .select('*')
+      .order('requested_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async respondToPasswordRequest(requestId, status, newPassword, teacherEmail) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+
+    // 1. Update the request row
+    const updateObj = {
+      status: status,
+      responded_at: new Date().toISOString()
+    };
+    if (newPassword) updateObj.new_password = newPassword;
+
+    const { error: reqError } = await supabaseClient
+      .from('password_requests')
+      .update(updateObj)
+      .eq('id', requestId);
+    if (reqError) throw reqError;
+
+    // 2. If accepted, update the teacher's password in profiles
+    if (status === 'accepted' && newPassword && teacherEmail) {
+      const { error: profError } = await supabaseClient
+        .from('profiles')
+        .update({ password_text: newPassword })
+        .eq('email', teacherEmail);
+      // Non-fatal — log but don't throw
+      if (profError) console.warn("Could not update profile password:", profError);
+    }
+
+    return true;
+  },
+
+  // --- ADMIN METHODS ---
+
+  async getAllMaterials() {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    const { data, error } = await supabaseClient
+      .from('materials')
+      .select('id, name, created_at, subject_id, subjects(code)')
+      .order('created_at', { ascending: false });
+    if (error) {
+      // Fallback without join
+      const { data: raw, error: rawErr } = await supabaseClient
+        .from('materials')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (rawErr) throw rawErr;
+      return raw || [];
+    }
+    return data || [];
   }
 };
 window.DatabaseService = DatabaseService;
+

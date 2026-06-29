@@ -75,6 +75,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         
         if (State.currentProfile.role === 'hod') {
           navigateTo('view-hod-dashboard');
+        } else if (State.currentProfile.role === 'admin') {
+          navigateTo('view-admin-dashboard');
         } else {
           navigateTo('view-teacher-dashboard');
         }
@@ -128,6 +130,8 @@ function navigateTo(viewId) {
     renderTeacherDashboard();
   } else if (viewId === 'view-hod-dashboard') {
     renderHODDashboard();
+  } else if (viewId === 'view-admin-dashboard') {
+    renderAdminDashboard();
   } else if (viewId === 'view-subject-workspace' && State.activeSubject) {
     renderSubjectWorkspace();
   } else if (viewId === 'view-review-edit' && State.activePaper) {
@@ -154,7 +158,11 @@ function setupSidebar() {
   const initials = State.currentProfile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   document.getElementById("user-avatar-initials").innerText = initials;
   document.getElementById("profile-user-name").innerText = State.currentProfile.name;
-  document.getElementById("profile-user-role").innerText = State.currentProfile.role === 'hod' ? 'HOD' : 'Faculty';
+
+  let roleLabel = 'Faculty';
+  if (State.currentProfile.role === 'hod') roleLabel = 'HOD';
+  else if (State.currentProfile.role === 'admin') roleLabel = 'Admin';
+  document.getElementById("profile-user-role").innerText = roleLabel;
 
   const avatarImg = document.getElementById("user-avatar-image");
   const avatarInitials = document.getElementById("user-avatar-initials");
@@ -171,7 +179,13 @@ function setupSidebar() {
 
   // Build menu items based on role
   let menuHtml = '';
-  if (State.currentProfile.role === 'hod') {
+  if (State.currentProfile.role === 'admin') {
+    menuHtml = `
+      <button class="nav-item ${State.activeView === 'view-admin-dashboard' ? 'active' : ''}" onclick="navigateTo('view-admin-dashboard')">
+        <i class="fa-solid fa-shield-halved"></i> Admin Panel
+      </button>
+    `;
+  } else if (State.currentProfile.role === 'hod') {
     menuHtml = `
       <button class="nav-item ${State.activeView === 'view-hod-dashboard' ? 'active' : ''}" onclick="navigateTo('view-hod-dashboard')">
         <i class="fa-solid fa-chart-line"></i> Dashboard
@@ -202,10 +216,10 @@ function setupEventListeners() {
     document.getElementById("auth-login-container").style.display = "flex";
   });
 
-  // Forgot Password Trigger
+  // Forgot Password Trigger — open request modal
   document.getElementById("link-forgot-password").addEventListener("click", (e) => {
     e.preventDefault();
-    alert("If you forgot your password, please contact the Head of Department (HOD) to recover or reset it. Pinned passwords can be recovered directly on the HOD Dashboard.");
+    openPasswordRequestModal();
   });
 
   // Login Submit
@@ -238,6 +252,8 @@ function setupEventListeners() {
       
       if (State.currentProfile.role === 'hod') {
         navigateTo('view-hod-dashboard');
+      } else if (State.currentProfile.role === 'admin') {
+        navigateTo('view-admin-dashboard');
       } else {
         navigateTo('view-teacher-dashboard');
       }
@@ -1534,6 +1550,40 @@ async function renderHODDashboard() {
       }).join("");
     }
 
+    // 4. Fetch Password Reset Requests
+    const requestsTbody = document.getElementById("hod-requests-tbody");
+    if (requestsTbody) {
+      try {
+        const requests = await DatabaseService.getPasswordRequests();
+        if (requests.length === 0) {
+          requestsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No password reset requests yet.</td></tr>`;
+        } else {
+          requestsTbody.innerHTML = requests.map(req => {
+            const statusBadge = req.status === 'pending'
+              ? `<span class="badge badge-warning">Pending</span>`
+              : req.status === 'accepted'
+              ? `<span class="badge badge-success">Accepted</span>`
+              : `<span class="badge badge-danger">Rejected</span>`;
+            const actions = req.status === 'pending' ? `
+              <div class="item-actions" style="justify-content:flex-end;gap:8px;">
+                <button class="btn btn-primary btn-sm" onclick="openAcceptPasswordModal('${req.id}','${req.teacher_email}','${req.teacher_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-check"></i> Accept</button>
+                <button class="btn btn-secondary btn-sm" style="background:var(--danger-color,#e74c3c);color:#fff;" onclick="rejectPasswordRequest('${req.id}')"><i class="fa-solid fa-xmark"></i> Reject</button>
+              </div>` : `<span style="color:var(--text-muted);font-style:italic;font-size:13px;">Resolved</span>`;
+            return `<tr>
+              <td><strong>${req.teacher_name}</strong></td>
+              <td>${req.teacher_email}</td>
+              <td>${new Date(req.requested_at).toLocaleString()}</td>
+              <td>${statusBadge}</td>
+              <td>${actions}</td>
+            </tr>`;
+          }).join("");
+        }
+      } catch (reqErr) {
+        console.warn("Could not load password requests (table may not exist):", reqErr);
+        requestsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Could not load requests. Ensure the password_requests table exists in Supabase.</td></tr>`;
+      }
+    }
+
   } catch (error) {
     console.error("HOD Dashboard error:", error);
     showToast("Error retrieving departmental reports", "error");
@@ -1917,4 +1967,232 @@ async function deleteUserWorkflow(userId) {
   }
 }
 window.deleteUserWorkflow = deleteUserWorkflow;
+
+// =============================================
+// --- PASSWORD RESET REQUEST MODAL ---
+// =============================================
+function openPasswordRequestModal() {
+  // Pre-fill email from login form if typed
+  const loginEmail = document.getElementById("login-email").value;
+  if (loginEmail) document.getElementById("req-email").value = loginEmail;
+  document.getElementById("modal-password-request").style.display = "flex";
+}
+window.openPasswordRequestModal = openPasswordRequestModal;
+
+function closePasswordRequestModal() {
+  document.getElementById("modal-password-request").style.display = "none";
+}
+window.closePasswordRequestModal = closePasswordRequestModal;
+
+async function submitPasswordRequestWorkflow(event) {
+  event.preventDefault();
+  const email = document.getElementById("req-email").value.trim();
+  const name = document.getElementById("req-name").value.trim();
+
+  if (!email.toLowerCase().endsWith("@apsit.edu.in")) {
+    alert("Only @apsit.edu.in email addresses are allowed.");
+    return;
+  }
+
+  showLoader(true, "Sending request to HOD...");
+  try {
+    await DatabaseService.submitPasswordRequest(email, name);
+    closePasswordRequestModal();
+    alert(`✅ Your password reset request has been sent to the HOD.\n\nIf the HOD rejects it, please contact the System Admin at admin@apsit.edu.in.`);
+  } catch (err) {
+    console.error("Failed to submit request:", err);
+    alert(err.message || "Failed to send request. Please try again.");
+  } finally {
+    showLoader(false);
+  }
+}
+window.submitPasswordRequestWorkflow = submitPasswordRequestWorkflow;
+
+// HOD / Admin accept password flow
+function openAcceptPasswordModal(requestId, teacherEmail, teacherName) {
+  document.getElementById("accept-request-id").value = requestId;
+  document.getElementById("accept-teacher-email").value = teacherEmail;
+  document.getElementById("accept-teacher-label").innerText = teacherName + " (" + teacherEmail + ")";
+  document.getElementById("accept-new-password").value = "";
+  document.getElementById("modal-accept-password").style.display = "flex";
+}
+window.openAcceptPasswordModal = openAcceptPasswordModal;
+
+function closeAcceptPasswordModal() {
+  document.getElementById("modal-accept-password").style.display = "none";
+}
+window.closeAcceptPasswordModal = closeAcceptPasswordModal;
+
+async function confirmAcceptPasswordRequest(event) {
+  event.preventDefault();
+  const requestId = document.getElementById("accept-request-id").value;
+  const teacherEmail = document.getElementById("accept-teacher-email").value;
+  const newPassword = document.getElementById("accept-new-password").value;
+
+  showLoader(true, "Accepting request and updating password...");
+  try {
+    await DatabaseService.respondToPasswordRequest(requestId, 'accepted', newPassword, teacherEmail);
+    closeAcceptPasswordModal();
+    // Refresh whichever dashboard is active
+    if (State.currentProfile.role === 'admin') {
+      await renderAdminDashboard();
+    } else {
+      await renderHODDashboard();
+    }
+  } catch (err) {
+    console.error("Accept request error:", err);
+    alert(err.message || "Failed to accept request.");
+  } finally {
+    showLoader(false);
+  }
+}
+window.confirmAcceptPasswordRequest = confirmAcceptPasswordRequest;
+
+async function rejectPasswordRequest(requestId) {
+  showLoader(true, "Rejecting request...");
+  try {
+    await DatabaseService.respondToPasswordRequest(requestId, 'rejected', null, null);
+    if (State.currentProfile.role === 'admin') {
+      await renderAdminDashboard();
+    } else {
+      await renderHODDashboard();
+    }
+  } catch (err) {
+    console.error("Reject request error:", err);
+    alert(err.message || "Failed to reject request.");
+  } finally {
+    showLoader(false);
+  }
+}
+window.rejectPasswordRequest = rejectPasswordRequest;
+
+// =============================================
+// --- ADMIN DASHBOARD ---
+// =============================================
+async function renderAdminDashboard() {
+  setupSidebar();
+  if (!State.currentUser) return;
+
+  showLoader(true, "Loading admin dashboard...");
+  try {
+    // 1. Stats
+    const stats = await DatabaseService.getDepartmentStats();
+    const allUsers = await DatabaseService.getTeachersList();
+    document.getElementById("admin-stat-users").innerText = allUsers.length;
+    document.getElementById("admin-stat-subjects").innerText = stats.subjects;
+    document.getElementById("admin-stat-papers").innerText = stats.papers;
+    document.getElementById("admin-stat-materials").innerText = stats.materials;
+
+    // 2. All Users table
+    const usersTbody = document.getElementById("admin-users-tbody");
+    if (allUsers.length === 0) {
+      usersTbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);">No users registered.</td></tr>`;
+    } else {
+      usersTbody.innerHTML = allUsers.map(u => {
+        const subsText = u.subjects.length > 0
+          ? u.subjects.map(s => `<span class="subject-code">${s.code}</span>`).join(" ")
+          : `<span style="color:var(--text-muted);font-style:italic;">None</span>`;
+        const pwdText = u.password_text
+          ? `<code style="background:var(--bg-surface-opaque);padding:4px 8px;border-radius:var(--radius-sm);font-size:13px;border:1px solid var(--border-color);">${u.password_text}</code>`
+          : `<span style="color:var(--text-muted);font-style:italic;">N/A</span>`;
+        const roleBadge = u.role === 'admin'
+          ? `<span class="badge" style="background:#8b5cf6;color:#fff;">Admin</span>`
+          : u.role === 'hod'
+          ? `<span class="badge badge-info">HOD</span>`
+          : `<span class="badge badge-success">Faculty</span>`;
+        return `<tr>
+          <td><strong>${u.name}</strong></td>
+          <td>${u.email}</td>
+          <td>${roleBadge}</td>
+          <td>${pwdText}</td>
+          <td>${subsText}</td>
+          <td><strong>${u.papersCount}</strong></td>
+          <td>
+            <div class="item-actions" style="justify-content:flex-end;">
+              <button class="btn btn-icon-sm" title="Edit" onclick="openEditUserModal('${u.id}','${u.name.replace(/'/g,"\\'")  }','${u.email}','${(u.password_text||'').replace(/'/g,"\\'")  }','${u.role}')"><i class="fa-solid fa-pen-to-square"></i></button>
+              <button class="btn btn-icon-sm btn-danger" title="Delete" onclick="deleteUserWorkflow('${u.id}')"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+    }
+
+    // 3. All Password Requests
+    const adminReqTbody = document.getElementById("admin-requests-tbody");
+    try {
+      const requests = await DatabaseService.getPasswordRequests();
+      if (requests.length === 0) {
+        adminReqTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">No password reset requests.</td></tr>`;
+      } else {
+        adminReqTbody.innerHTML = requests.map(req => {
+          const statusBadge = req.status === 'pending'
+            ? `<span class="badge badge-warning">Pending</span>`
+            : req.status === 'accepted'
+            ? `<span class="badge badge-success">Accepted</span>`
+            : `<span class="badge badge-danger">Rejected</span>`;
+          const actions = req.status === 'pending' ? `
+            <div class="item-actions" style="justify-content:flex-end;gap:8px;">
+              <button class="btn btn-primary btn-sm" onclick="openAcceptPasswordModal('${req.id}','${req.teacher_email}','${req.teacher_name.replace(/'/g,"\\'")}')"><i class="fa-solid fa-check"></i> Accept</button>
+              <button class="btn btn-secondary btn-sm" style="background:var(--danger-color,#e74c3c);color:#fff;" onclick="rejectPasswordRequest('${req.id}')"><i class="fa-solid fa-xmark"></i> Reject</button>
+            </div>` : `<span style="color:var(--text-muted);font-style:italic;font-size:13px;">Resolved</span>`;
+          return `<tr>
+            <td><strong>${req.teacher_name}</strong></td>
+            <td>${req.teacher_email}</td>
+            <td>${new Date(req.requested_at).toLocaleString()}</td>
+            <td>${statusBadge}</td>
+            <td>${actions}</td>
+          </tr>`;
+        }).join("");
+      }
+    } catch (reqErr) {
+      adminReqTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Requests table not set up yet.</td></tr>`;
+    }
+
+    // 4. All Papers
+    const adminPapersTbody = document.getElementById("admin-papers-tbody");
+    const allPapers = await DatabaseService.getAllPapers();
+    if (allPapers.length === 0) {
+      adminPapersTbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);">No papers generated yet.</td></tr>`;
+    } else {
+      adminPapersTbody.innerHTML = allPapers.map(p => {
+        const subName = p.subjects ? p.subjects.name : "N/A";
+        const subCode = p.subjects ? p.subjects.code : "";
+        const teacher = p.subjects?.profiles ? p.subjects.profiles.name : "Unknown";
+        return `<tr>
+          <td><strong>${p.title}</strong></td>
+          <td>${subName} <span class="subject-code" style="margin-left:6px;">${subCode}</span></td>
+          <td>${teacher}</td>
+          <td>${p.exam_type === 'unit_test' ? 'Unit Test' : 'Semester Exam'}</td>
+          <td><strong>${p.total_marks}</strong></td>
+          <td>${new Date(p.created_at).toLocaleDateString()}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    // 5. All Materials
+    const adminMatTbody = document.getElementById("admin-materials-tbody");
+    const allMats = await DatabaseService.getAllMaterials();
+    if (allMats.length === 0) {
+      adminMatTbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--text-muted);">No study materials uploaded yet.</td></tr>`;
+    } else {
+      adminMatTbody.innerHTML = allMats.map(m => {
+        const code = m.subjects ? m.subjects.code : (m.subject_id ? m.subject_id.slice(0, 8) : "N/A");
+        const displayName = m.name.replace(/^\[Module [1-6]\]\s*/, '').replace(/^\[Past Papers\]\s*/, '');
+        return `<tr>
+          <td>${displayName}</td>
+          <td><span class="subject-code">${code}</span></td>
+          <td>${new Date(m.created_at).toLocaleDateString()}</td>
+        </tr>`;
+      }).join("");
+    }
+
+  } catch (err) {
+    console.error("Admin dashboard error:", err);
+    alert("Error loading admin dashboard: " + err.message);
+  } finally {
+    showLoader(false);
+  }
+}
+window.renderAdminDashboard = renderAdminDashboard;
+
 

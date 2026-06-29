@@ -453,6 +453,29 @@
           </div>
         </div>
 
+        <!-- HOD: Password Reset Requests Panel -->
+        <div style="margin-top: 32px;" id="hod-requests-section">
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">
+            <i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 8px;"></i>Password Reset Requests
+          </h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Faculty Name</th>
+                  <th>Email</th>
+                  <th>Requested At</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="hod-requests-tbody">
+                <!-- Dynamic password reset requests -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Departmental Papers Archive Section -->
         <div>
           <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Departmental Generated Papers</h2>
@@ -471,6 +494,138 @@
               </thead>
               <tbody id="hod-papers-tbody">
                 <!-- Dynamic departmental papers database lists -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. ADMIN DASHBOARD VIEW -->
+      <section class="app-view" id="view-admin-dashboard">
+        <div class="view-header">
+          <div class="header-title-container">
+            <h1 class="view-title"><i class="fa-solid fa-shield-halved" style="color: var(--accent-color); margin-right: 10px;"></i>System Admin Dashboard</h1>
+            <p class="view-subtitle">Full control over all users, papers, materials and password requests</p>
+          </div>
+        </div>
+
+        <!-- Admin Stat Summary Cards -->
+        <div class="stats-bar">
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="admin-stat-users">0</span>
+              <span class="stat-label">Total Users</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-book-open"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="admin-stat-subjects">0</span>
+              <span class="stat-label">Total Subjects</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="admin-stat-papers">0</span>
+              <span class="stat-label">Generated Papers</span>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-file-lines"></i></div>
+            <div class="stat-info">
+              <span class="stat-value" id="admin-stat-materials">0</span>
+              <span class="stat-label">Study Materials</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin: All Users (CRUD) -->
+        <div style="margin-top: 32px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+            <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0;">All System Users</h2>
+            <button class="btn btn-primary" onclick="openAddUserModal()">
+              <i class="fa-solid fa-user-plus"></i> Add New User
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>User Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Password Credential</th>
+                  <th>Subjects</th>
+                  <th>Papers</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody">
+                <!-- Dynamic admin users table -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin: Password Reset Requests -->
+        <div style="margin-top: 32px;">
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">
+            <i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 8px;"></i>All Password Reset Requests
+          </h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Faculty Name</th>
+                  <th>Email</th>
+                  <th>Requested At</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admin-requests-tbody">
+                <!-- Dynamic password reset requests -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin: All Papers -->
+        <div style="margin-top: 32px;">
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Generated Papers</h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Paper Title</th>
+                  <th>Subject</th>
+                  <th>Faculty</th>
+                  <th>Exam Type</th>
+                  <th>Marks</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="admin-papers-tbody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Admin: All Materials -->
+        <div style="margin-top: 32px;">
+          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Study Materials / Notes</h2>
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>File Name</th>
+                  <th>Subject Code</th>
+                  <th>Uploaded</th>
+                </tr>
+              </thead>
+              <tbody id="admin-materials-tbody">
               </tbody>
             </table>
           </div>
@@ -642,6 +797,58 @@
             <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
               <button type="button" class="btn btn-secondary" onclick="closeProfileSettingsModal()">Cancel</button>
               <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASSWORD RESET REQUEST MODAL -->
+    <div class="modal-overlay" id="modal-password-request" style="display: none;">
+      <div class="glass-card modal-card" style="max-width: 460px; width: 100%;">
+        <div class="modal-header">
+          <h2 class="modal-title"><i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 8px;"></i> Request Password Reset</h2>
+          <button class="modal-close" onclick="closePasswordRequestModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="padding-top: 10px;">
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 18px;">Your request will be sent to the HOD. If rejected, please contact the System Admin at <strong>admin@apsit.edu.in</strong>.</p>
+          <form id="form-password-request" onsubmit="submitPasswordRequestWorkflow(event)">
+            <div class="form-group">
+              <label class="form-label">Your Email Address</label>
+              <input type="email" class="form-control" id="req-email" required placeholder="name@apsit.edu.in" pattern="[a-zA-Z0-9._%+-]+@apsit\.edu\.in">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Your Full Name</label>
+              <input type="text" class="form-control" id="req-name" required placeholder="Professor John Doe">
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" onclick="closePasswordRequestModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Send Request</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOD ACCEPT PASSWORD MODAL -->
+    <div class="modal-overlay" id="modal-accept-password" style="display: none;">
+      <div class="glass-card modal-card" style="max-width: 420px; width: 100%;">
+        <div class="modal-header">
+          <h2 class="modal-title"><i class="fa-solid fa-unlock" style="color: var(--primary-color); margin-right: 8px;"></i> Set New Password</h2>
+          <button class="modal-close" onclick="closeAcceptPasswordModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-body" style="padding-top: 10px;">
+          <input type="hidden" id="accept-request-id">
+          <input type="hidden" id="accept-teacher-email">
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Set a new password for <strong id="accept-teacher-label"></strong>.</p>
+          <form id="form-accept-password" onsubmit="confirmAcceptPasswordRequest(event)">
+            <div class="form-group">
+              <label class="form-label">New Password</label>
+              <input type="text" class="form-control" id="accept-new-password" required minlength="6" placeholder="newpassword123">
+            </div>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
+              <button type="button" class="btn btn-secondary" onclick="closeAcceptPasswordModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Confirm & Accept</button>
             </div>
           </form>
         </div>

@@ -1622,3 +1622,67 @@ body.dark-theme .btn-options-dots:hover {
   }
 }
 
+/* --- BADGE UTILITIES --- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.badge-success {
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.badge-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.badge-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.badge-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+/* --- SMALL BUTTON VARIANTS --- */
+.btn-sm {
+  padding: 5px 12px !important;
+  font-size: 13px !important;
+  border-radius: var(--radius-sm) !important;
+}
+.btn-icon-sm {
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+  border-radius: var(--radius-sm) !important;
+  background: var(--bg-surface-opaque);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+.btn-icon-sm:hover {
+  background: var(--bg-surface-hover);
+  color: var(--primary-color);
+}
+.btn-icon-sm.btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Dark theme badge overrides */
+body.dark-theme .badge-success { background: rgba(16,185,129,0.18); color: #34d399; }
+body.dark-theme .badge-warning  { background: rgba(245,158,11,0.18); color: #fbbf24; }
+body.dark-theme .badge-danger   { background: rgba(239,68,68,0.18);  color: #f87171; }
+body.dark-theme .badge-info     { background: rgba(59,130,246,0.18); color: #60a5fa; }
+body.dark-theme .btn-icon-sm    { background: var(--bg-surface-opaque); border-color: var(--border-color); color: var(--text-secondary); }
