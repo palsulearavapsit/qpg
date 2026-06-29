@@ -1454,3 +1454,171 @@ body.dark-theme .btn-options-dots:hover {
   color: var(--danger-color) !important;
 }
 
+/* --- MOBILE RESPONSIVENESS AND PORTAL VIEWPORT RATIOS --- */
+@media (max-width: 992px) {
+  .review-split {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Reduce viewport paddings */
+  .main-viewport {
+    padding: 16px !important;
+    gap: 20px !important;
+  }
+
+  /* Make HOD & Teacher stats grid responsive */
+  .stats-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  
+  .stat-card {
+    padding: 12px !important;
+    gap: 8px !important;
+  }
+
+  .stat-icon {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 16px !important;
+  }
+
+  .stat-value {
+    font-size: 18px !important;
+  }
+
+  .stat-label {
+    font-size: 11px !important;
+  }
+
+  /* Adjust App Header elements */
+  .app-header {
+    height: auto !important;
+    min-height: 50px;
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .brand-name-text {
+    font-size: 14px !important;
+    text-align: center;
+    width: 100%;
+    white-space: normal !important;
+  }
+
+  .header-right {
+    width: 100% !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+
+  /* Hide textual user descriptions on tiny screens */
+  .user-display-name,
+  .user-role-badge {
+    display: none !important;
+  }
+
+  .user-profile-button {
+    padding: 2px 6px !important;
+  }
+
+  /* Sub-Navbar Layout adjustments */
+  .sub-navbar {
+    padding: 0 12px !important;
+    justify-content: center !important;
+  }
+
+  .nav-menu {
+    gap: 12px !important;
+  }
+
+  .nav-item {
+    font-size: 13px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* Dashboard Welcome/Intro layout scaling */
+  .view-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .view-header .btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .view-title {
+    font-size: 24px !important;
+  }
+
+  /* Modals formatting */
+  .modal-card {
+    padding: 16px !important;
+    width: 95% !important;
+    margin: auto !important;
+    max-height: 90vh !important;
+  }
+  
+  .modal-body {
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Form layouts columns collapse */
+  .form-row {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Module selector chips */
+  .module-select-chip {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+  }
+
+  /* Tables content scrolling */
+  .data-table {
+    min-width: 600px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Scale down thumbnails and text to fit single row */
+  .subject-thumbnail {
+    width: 50px !important;
+    height: 35px !important;
+    font-size: 15px !important;
+  }
+
+  .subject-name {
+    font-size: 14px !important;
+  }
+
+  .subject-meta {
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* On very small devices make stats vertical stack */
+  .stats-bar {
+    grid-template-columns: 1fr !important;
+  }
+
+  .brand-name-text {
+    font-size: 13px !important;
+  }
+  
+  .auth-card {
+    padding: 24px 16px !important;
+  }
+}
+
