@@ -1360,6 +1360,11 @@ select.form-control {
   background: #ffffff !important;
   transition: var(--transition-fast) !important;
   box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.subjects-list-container .subject-card:last-child {
+  border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
 }
 
 .subjects-list-container .subject-card:hover {
