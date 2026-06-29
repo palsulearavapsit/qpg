@@ -21,9 +21,15 @@
       </div>
       <div class="header-right">
         <button class="btn-logout" id="btn-theme-toggle" title="Toggle Theme" style="margin-right: 8px;"><i class="fa-solid fa-moon"></i></button>
-        <span class="user-role-badge" id="profile-user-role">Faculty</span>
-        <div class="user-avatar-circle" id="user-avatar-initials">PT</div>
-        <span class="user-display-name" id="profile-user-name">Professor Test</span>
+        
+        <!-- Clickable Profile Container -->
+        <div class="user-profile-button" onclick="openProfileSettingsModal()" title="Edit Profile Details" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 12px; border-radius: var(--radius-sm); transition: var(--transition-fast);">
+          <span class="user-role-badge" id="profile-user-role">Faculty</span>
+          <img class="user-avatar-circle" id="user-avatar-image" src="" style="display: none; width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid rgba(255,255,255,0.4);" />
+          <div class="user-avatar-circle" id="user-avatar-initials">PT</div>
+          <span class="user-display-name" id="profile-user-name">Professor Test</span>
+        </div>
+        
         <button class="btn-logout" id="btn-sidebar-logout" title="Log Out"><i class="fa-solid fa-power-off"></i></button>
       </div>
     </header>
@@ -555,6 +561,65 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div class="toast-container" id="toast-messages-container">
       <!-- Toasts dynamically appended here -->
+    </div>
+
+    <!-- USER PROFILE SETTINGS MODAL -->
+    <div class="modal-overlay" id="modal-profile-settings" style="display: none;">
+      <div class="glass-card modal-card" style="max-width: 500px; width: 100%;">
+        <div class="modal-header">
+          <h2 class="modal-title"><i class="fa-solid fa-user-gear" style="color: var(--primary-color); margin-right: 8px;"></i> Profile Settings</h2>
+          <button class="modal-close" onclick="closeProfileSettingsModal()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="modal-body" style="padding-top: 10px;">
+          <form id="form-profile-settings" onsubmit="saveProfileSettingsWorkflow(event)">
+            <div class="form-group" style="text-align: center; margin-bottom: 20px;">
+              <div style="position: relative; display: inline-block;">
+                <img id="profile-settings-preview" src="https://api.dicebear.com/7.x/bottts/svg?seed=apsit" style="width: 90px; height: 90px; border-radius: 50%; border: 3px solid var(--primary-color); object-fit: cover; background: var(--bg-surface-opaque);" />
+                <label for="profile-picture-input" style="position: absolute; bottom: 0; right: 0; background: var(--primary-color); color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #fff; font-size: 12px; transition: var(--transition-fast);">
+                  <i class="fa-solid fa-camera"></i>
+                </label>
+                <input type="file" id="profile-picture-input" accept="image/*" style="display: none;" onchange="previewProfilePicture(event)">
+              </div>
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 8px;">Upload a profile picture file</p>
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Full Name</label>
+              <input type="text" class="form-control" id="profile-settings-name" required placeholder="Professor John Doe">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" id="profile-settings-username" placeholder="johndoe_apsit">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Self Description / Bio</label>
+              <textarea class="form-control" id="profile-settings-description" rows="3" placeholder="Add description about yourself..."></textarea>
+            </div>
+            
+            <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 20px 0;" />
+            
+            <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px;"><i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 6px;"></i> Change Password</h3>
+            
+            <div class="form-group">
+              <label class="form-label">New Password (leave blank to keep current)</label>
+              <input type="password" class="form-control" id="profile-settings-password" placeholder="••••••••" minlength="6">
+            </div>
+            
+            <div class="form-group">
+              <label class="form-label">Confirm New Password</label>
+              <input type="password" class="form-control" id="profile-settings-confirm-password" placeholder="••••••••">
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">
+              <button type="button" class="btn btn-secondary" onclick="closeProfileSettingsModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
   </div>

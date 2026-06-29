@@ -156,6 +156,19 @@ function setupSidebar() {
   document.getElementById("profile-user-name").innerText = State.currentProfile.name;
   document.getElementById("profile-user-role").innerText = State.currentProfile.role === 'hod' ? 'HOD' : 'Faculty';
 
+  const avatarImg = document.getElementById("user-avatar-image");
+  const avatarInitials = document.getElementById("user-avatar-initials");
+  const profilePic = State.currentProfile.profile_picture || State.currentUser.user_metadata?.profile_picture || "";
+  
+  if (profilePic) {
+    avatarImg.src = profilePic;
+    avatarImg.style.display = "block";
+    avatarInitials.style.display = "none";
+  } else {
+    avatarImg.style.display = "none";
+    avatarInitials.style.display = "flex";
+  }
+
   // Build menu items based on role
   let menuHtml = '';
   if (State.currentProfile.role === 'hod') {
@@ -1604,3 +1617,109 @@ async function deleteSubjectWorkflow(event, subjectId) {
   }
 }
 window.deleteSubjectWorkflow = deleteSubjectWorkflow;
+
+// --- USER PROFILE SETTINGS CONTROLLER & HANDLERS ---
+let tempProfilePictureBase64 = null;
+
+function openProfileSettingsModal() {
+  if (!State.currentUser || !State.currentProfile) return;
+  
+  const profile = State.currentProfile;
+  const user = State.currentUser;
+  
+  document.getElementById("profile-settings-name").value = profile.name;
+  document.getElementById("profile-settings-username").value = profile.username || user.user_metadata?.username || "";
+  document.getElementById("profile-settings-description").value = profile.description || user.user_metadata?.description || "";
+  
+  const profilePic = profile.profile_picture || user.user_metadata?.profile_picture || "";
+  tempProfilePictureBase64 = profilePic;
+  
+  const previewImg = document.getElementById("profile-settings-preview");
+  if (profilePic) {
+    previewImg.src = profilePic;
+  } else {
+    const initials = profile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    previewImg.src = `https://api.dicebear.com/7.x/initials/svg?seed=${initials}`;
+  }
+  
+  // Reset password fields
+  document.getElementById("profile-settings-password").value = "";
+  document.getElementById("profile-settings-confirm-password").value = "";
+  
+  document.getElementById("modal-profile-settings").style.display = "flex";
+}
+window.openProfileSettingsModal = openProfileSettingsModal;
+
+function closeProfileSettingsModal() {
+  document.getElementById("modal-profile-settings").style.display = "none";
+  tempProfilePictureBase64 = null;
+}
+window.closeProfileSettingsModal = closeProfileSettingsModal;
+
+function previewProfilePicture(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    tempProfilePictureBase64 = e.target.result;
+    document.getElementById("profile-settings-preview").src = tempProfilePictureBase64;
+  };
+  reader.readAsDataURL(file);
+}
+window.previewProfilePicture = previewProfilePicture;
+
+async function saveProfileSettingsWorkflow(event) {
+  event.preventDefault();
+  
+  if (!State.currentUser || !State.currentProfile) return;
+  
+  const name = document.getElementById("profile-settings-name").value.trim();
+  const username = document.getElementById("profile-settings-username").value.trim();
+  const description = document.getElementById("profile-settings-description").value.trim();
+  const newPassword = document.getElementById("profile-settings-password").value;
+  const confirmPassword = document.getElementById("profile-settings-confirm-password").value;
+  
+  if (newPassword && newPassword !== confirmPassword) {
+    alert("New passwords do not match!");
+    return;
+  }
+  
+  showLoader(true, "Updating profile details...");
+  
+  try {
+    // 1. Update Profile in Database (and Auth Metadata fallback)
+    await DatabaseService.updateProfile(State.currentUser.id, {
+      name,
+      username,
+      profile_picture: tempProfilePictureBase64,
+      description
+    });
+    
+    // 2. Change Password in Auth if requested
+    if (newPassword) {
+      const { error: pwdError } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+      if (pwdError) throw pwdError;
+    }
+    
+    // 3. Update active states locally
+    State.currentProfile.name = name;
+    State.currentProfile.username = username;
+    State.currentProfile.profile_picture = tempProfilePictureBase64;
+    State.currentProfile.description = description;
+    
+    // 4. Reload header view
+    setupSidebar();
+    
+    closeProfileSettingsModal();
+  } catch (error) {
+    console.error("Profile update failed:", error);
+    alert(error.message || "Failed to save profile changes.");
+  } finally {
+    showLoader(false);
+  }
+}
+window.saveProfileSettingsWorkflow = saveProfileSettingsWorkflow;
+

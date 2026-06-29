@@ -365,6 +365,42 @@ const DatabaseService = {
       unitTests: unitTestsCount,
       materials: materialsCount || 0
     };
+  },
+
+  async updateProfile(userId, { name, username, profile_picture, description }) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    
+    // 1. Update profiles table name (guaranteed to exist)
+    const { error: profileError } = await supabaseClient
+      .from('profiles')
+      .update({ name })
+      .eq('id', userId);
+      
+    if (profileError) throw profileError;
+    
+    // 2. Try updating extra columns in profiles table. If column does not exist, catch error and store in User Metadata
+    try {
+      const { error: extraError } = await supabaseClient
+        .from('profiles')
+        .update({ username, profile_picture, description })
+        .eq('id', userId);
+        
+      if (extraError) {
+        // Fallback to Auth metadata
+        const { error: authError } = await supabaseClient.auth.updateUser({
+          data: { username, profile_picture, description }
+        });
+        if (authError) throw authError;
+      }
+    } catch (e) {
+      // Fallback to Auth metadata
+      const { error: authError } = await supabaseClient.auth.updateUser({
+        data: { username, profile_picture, description }
+      });
+      if (authError) throw authError;
+    }
+    
+    return true;
   }
 };
 window.DatabaseService = DatabaseService;
