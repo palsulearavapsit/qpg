@@ -297,7 +297,7 @@ const DatabaseService = {
   },
 
   async getDepartmentStats() {
-    if (!isDbConfigured()) return { teachers: 0, subjects: 0, papers: 0, unitTests: 0, semesters: 0 };
+    if (!isDbConfigured()) return { teachers: 0, subjects: 0, papers: 0, unitTests: 0, materials: 0 };
     
     // 1. Total teachers
     const { count: teachersCount, error: tErr } = await supabaseClient
@@ -323,14 +323,20 @@ const DatabaseService = {
     
     const papersCount = papers ? papers.length : 0;
     const unitTestsCount = papers ? papers.filter(p => p.exam_type === 'unit_test').length : 0;
-    const semestersCount = papers ? papers.filter(p => p.exam_type === 'semester').length : 0;
+    
+    // 4. Total materials
+    const { count: materialsCount, error: mErr } = await supabaseClient
+      .from('materials')
+      .select('*', { count: 'exact', head: true });
+      
+    if (mErr) throw mErr;
     
     return {
       teachers: teachersCount || 0,
       subjects: subjectsCount || 0,
       papers: papersCount,
       unitTests: unitTestsCount,
-      semesters: semestersCount
+      materials: materialsCount || 0
     };
   }
 };

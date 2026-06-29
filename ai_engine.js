@@ -252,7 +252,6 @@ Return ONLY a valid JSON object. Do not include markdown code block formatting (
 
   // Generates a mock paper for custom subjects (not ML) when Gemini is unavailable
   generateCustomSubjectTemplate(subjectName, subjectCode, semester, examType, totalMarks, markingSchemeStr, choiceStructure) {
-    const isUnitTest = examType === "unit_test";
     const marksList = markingSchemeStr.split("+").map(x => parseInt(x.trim()));
     
     const instructions = [
@@ -263,88 +262,36 @@ Return ONLY a valid JSON object. Do not include markdown code block formatting (
 
     const questions = [];
     
-    if (isUnitTest) {
-      // Unit test: usually 3 questions matching marksList
-      marksList.forEach((marks, idx) => {
-        const qNum = idx + 1;
-        questions.push({
-          id: `q${qNum}`,
-          question_number: String(qNum),
-          marks_per_option: marks,
-          type: "choice_or",
-          choice_text: `Answer Q${qNum}A OR Q${qNum}B`,
-          options: [
-            {
-              option_letter: "A",
-              text: `[Theory/Definition] Detailed question on ${subjectName} Core Topic (Part A) related to Unit ${idx+1}. Discuss its architecture and applications.`,
-              topic: `Unit ${idx+1} Concept`,
-              difficulty: "Medium",
-              marks: marks
-            },
-            {
-              option_letter: "B",
-              text: `[Analytical/Numerical] Explain the methodology behind ${subjectName} Topic (Part B). Formulate the equations and outline steps with a flowchart.`,
-              topic: `Unit ${idx+1} Concept`,
-              difficulty: "Medium",
-              marks: marks
-            }
-          ]
-        });
+    // Unit test: usually 3 questions matching marksList
+    marksList.forEach((marks, idx) => {
+      const qNum = idx + 1;
+      questions.push({
+        id: `q${qNum}`,
+        question_number: String(qNum),
+        marks_per_option: marks,
+        type: "choice_or",
+        choice_text: `Answer Q${qNum}A OR Q${qNum}B`,
+        options: [
+          {
+            option_letter: "A",
+            text: `[Theory/Definition] Detailed question on ${subjectName} Core Topic (Part A) related to Unit ${idx+1}. Discuss its architecture and applications.`,
+            topic: `Unit ${idx+1} Concept`,
+            difficulty: "Medium",
+            marks: marks
+          },
+          {
+            option_letter: "B",
+            text: `[Analytical/Numerical] Explain the methodology behind ${subjectName} Topic (Part B). Formulate the equations and outline steps with a flowchart.`,
+            topic: `Unit ${idx+1} Concept`,
+            difficulty: "Medium",
+            marks: marks
+          }
+        ]
       });
-    } else {
-      // Semester Exam: based on choiceStructure or default layout
-      const questionCount = choiceStructure.numQuestions || 5;
-      const questionMarks = choiceStructure.marksPerQuestion || 12;
-      const choiceType = choiceStructure.choiceType || "one_out_of_two";
-
-      for (let i = 1; i <= questionCount; i++) {
-        const options = [];
-        let type = "choice_or";
-        let choiceText = `Answer Q${i}A OR Q${i}B`;
-
-        if (choiceType === "one_out_of_two") {
-          options.push(
-            { option_letter: "A", text: `Explain the fundamental architecture and working mechanism of ${subjectName} Core Concept ${i}. Support with a neat diagram.`, topic: `Module ${i} Core`, difficulty: "Medium", marks: questionMarks },
-            { option_letter: "B", text: `Analyze the performance of ${subjectName} Concept ${i}. Discuss its limitations, practical challenges, and optimization solutions.`, topic: `Module ${i} Advanced`, difficulty: "Medium", marks: questionMarks }
-          );
-        } else if (choiceType === "two_out_of_three") {
-          type = "choice_any_two";
-          choiceText = `Answer any two of the following (each carries ${questionMarks/2} marks)`;
-          options.push(
-            { option_letter: "A", text: `Define and explain ${subjectName} Topic ${i} (Section A) with real-world applications.`, topic: `Module ${i} Intro`, difficulty: "Easy", marks: questionMarks/2 },
-            { option_letter: "B", text: `Illustrate the step-by-step algorithms used in ${subjectName} System ${i} (Section B).`, topic: `Module ${i} Operations`, difficulty: "Medium", marks: questionMarks/2 },
-            { option_letter: "C", text: `Discuss the comparative tradeoffs of implementing ${subjectName} Protocol ${i} (Section C).`, topic: `Module ${i} Design`, difficulty: "Hard", marks: questionMarks/2 }
-          );
-        } else if (choiceType === "one_out_of_three") {
-          type = "choice_any_one";
-          choiceText = `Answer any one of the following`;
-          options.push(
-            { option_letter: "A", text: `Provide a detailed exposition on ${subjectName} Architecture ${i}. Discuss deployment and constraints.`, topic: `Module ${i} Architecture`, difficulty: "Medium", marks: questionMarks },
-            { option_letter: "B", text: `Derive the mathematical equations and logic backing ${subjectName} Model ${i}.`, topic: `Module ${i} Mathematics`, difficulty: "Hard", marks: questionMarks },
-            { option_letter: "C", text: `Write detailed notes on: (i) ${subjectName} Subtopic ${i}.1 (ii) ${subjectName} Subtopic ${i}.2.`, topic: `Module ${i} Notes`, difficulty: "Easy", marks: questionMarks }
-          );
-        } else {
-          // No choice
-          type = "single";
-          choiceText = "Mandatory Question";
-          options.push(
-            { option_letter: "A", text: `Explain in detail the concept of ${subjectName} Framework ${i}. Discuss design principles, implementation strategies, and compile a comparative table.`, topic: `Module ${i} Unified`, difficulty: "Hard", marks: questionMarks }
-          );
-        }
-
-        questions.push({
-          id: `q${i}`,
-          question_number: String(i),
-          marks_per_option: questionMarks,
-          type,
-          choice_text: choiceText,
-          options
-        });
-      }
-    }
+    });
 
     return {
-      title: `${subjectName} ${isUnitTest ? "Unit Test" : "Semester Examination"}`,
+      title: `${subjectName} Unit Test`,
       subject_code: subjectCode,
       semester: semester,
       total_marks: totalMarks,
@@ -356,7 +303,6 @@ Return ONLY a valid JSON object. Do not include markdown code block formatting (
 
   // Generates a local paper using ML database
   generateLocalMLPaper(examType, totalMarks, markingSchemeStr, choiceStructure) {
-    const isUnitTest = examType === "unit_test";
     const questions = [];
     const instructions = [
       "All questions are compulsory.",
@@ -364,112 +310,44 @@ Return ONLY a valid JSON object. Do not include markdown code block formatting (
       "Support answers with mathematical formulations and examples."
     ];
 
-    if (isUnitTest) {
-      const marksList = markingSchemeStr.split("+").map(x => parseInt(x.trim()));
-      
-      marksList.forEach((marks, idx) => {
-        const qNum = idx + 1;
-        // Fetch questions of this mark size
-        const qPool = this.mlQuestionDatabase[marks] || this.mlQuestionDatabase[5]; // fallback to 5 marks
-        // Randomly pick two distinct questions for Option A and B
-        const shuffled = [...qPool].sort(() => 0.5 - Math.random());
-        const qA = shuffled[0];
-        const qB = shuffled[1] || shuffled[0];
+    const marksList = markingSchemeStr.split("+").map(x => parseInt(x.trim()));
+    
+    marksList.forEach((marks, idx) => {
+      const qNum = idx + 1;
+      // Fetch questions of this mark size
+      const qPool = this.mlQuestionDatabase[marks] || this.mlQuestionDatabase[5]; // fallback to 5 marks
+      // Randomly pick two distinct questions for Option A and B
+      const shuffled = [...qPool].sort(() => 0.5 - Math.random());
+      const qA = shuffled[0];
+      const qB = shuffled[1] || shuffled[0];
 
-        questions.push({
-          id: `q${qNum}`,
-          question_number: String(qNum),
-          marks_per_option: marks,
-          type: "choice_or",
-          choice_text: `Answer Q${qNum}A OR Q${qNum}B`,
-          options: [
-            {
-              option_letter: "A",
-              text: qA.text,
-              topic: qA.topic,
-              difficulty: qA.difficulty,
-              marks: marks
-            },
-            {
-              option_letter: "B",
-              text: qB.text,
-              topic: qB.topic,
-              difficulty: qB.difficulty,
-              marks: marks
-            }
-          ]
-        });
+      questions.push({
+        id: `q${qNum}`,
+        question_number: String(qNum),
+        marks_per_option: marks,
+        type: "choice_or",
+        choice_text: `Answer Q${qNum}A OR Q${qNum}B`,
+        options: [
+          {
+            option_letter: "A",
+            text: qA.text,
+            topic: qA.topic,
+            difficulty: qA.difficulty,
+            marks: marks
+          },
+          {
+            option_letter: "B",
+            text: qB.text,
+            topic: qB.topic,
+            difficulty: qB.difficulty,
+            marks: marks
+          }
+        ]
       });
-    } else {
-      // Semester exam
-      const questionCount = choiceStructure.numQuestions || 5;
-      const questionMarks = choiceStructure.marksPerQuestion || 12;
-      const choiceType = choiceStructure.choiceType || "one_out_of_two";
-
-      for (let i = 1; i <= questionCount; i++) {
-        let type = "choice_or";
-        let choiceText = `Answer Q${i}A OR Q${i}B`;
-        const options = [];
-
-        if (choiceType === "one_out_of_two") {
-          const qPool = this.mlQuestionDatabase[questionMarks] || this.mlQuestionDatabase[10]; // fallback
-          const shuffled = [...qPool].sort(() => 0.5 - Math.random());
-          const qA = shuffled[0];
-          const qB = shuffled[1] || shuffled[0];
-          
-          options.push(
-            { option_letter: "A", text: qA.text, topic: qA.topic, difficulty: qA.difficulty, marks: questionMarks },
-            { option_letter: "B", text: qB.text, topic: qB.topic, difficulty: qB.difficulty, marks: questionMarks }
-          );
-        } else if (choiceType === "two_out_of_three") {
-          type = "choice_any_two";
-          choiceText = `Answer any two of the following (each carries ${questionMarks/2} marks)`;
-          // Need 3 questions of half marks
-          const halfMarks = Math.floor(questionMarks / 2);
-          const qPool = this.mlQuestionDatabase[halfMarks] || this.mlQuestionDatabase[5];
-          const shuffled = [...qPool].sort(() => 0.5 - Math.random());
-          
-          options.push(
-            { option_letter: "A", text: shuffled[0].text, topic: shuffled[0].topic, difficulty: shuffled[0].difficulty, marks: halfMarks },
-            { option_letter: "B", text: shuffled[1].text, topic: shuffled[1].topic, difficulty: shuffled[1].difficulty, marks: halfMarks },
-            { option_letter: "C", text: (shuffled[2] || shuffled[0]).text, topic: (shuffled[2] || shuffled[0]).topic, difficulty: (shuffled[2] || shuffled[0]).difficulty, marks: halfMarks }
-          );
-        } else if (choiceType === "one_out_of_three") {
-          type = "choice_any_one";
-          choiceText = `Answer any one of the following`;
-          const qPool = this.mlQuestionDatabase[questionMarks] || this.mlQuestionDatabase[10];
-          const shuffled = [...qPool].sort(() => 0.5 - Math.random());
-          
-          options.push(
-            { option_letter: "A", text: shuffled[0].text, topic: shuffled[0].topic, difficulty: shuffled[0].difficulty, marks: questionMarks },
-            { option_letter: "B", text: shuffled[1].text, topic: shuffled[1].topic, difficulty: shuffled[1].difficulty, marks: questionMarks },
-            { option_letter: "C", text: (shuffled[2] || shuffled[0]).text, topic: (shuffled[2] || shuffled[0]).topic, difficulty: (shuffled[2] || shuffled[0]).difficulty, marks: questionMarks }
-          );
-        } else {
-          // single question
-          type = "single";
-          choiceText = "Mandatory Question";
-          const qPool = this.mlQuestionDatabase[questionMarks] || this.mlQuestionDatabase[10];
-          const q = qPool[Math.floor(Math.random() * qPool.length)];
-          
-          options.push(
-            { option_letter: "A", text: q.text, topic: q.topic, difficulty: q.difficulty, marks: questionMarks }
-          );
-        }
-
-        questions.push({
-          id: `q${i}`,
-          question_number: String(i),
-          marks_per_option: questionMarks,
-          type,
-          choice_text: choiceText,
-          options
-        });
-      }
-    }
+    });
 
     return {
-      title: `Machine Learning ${isUnitTest ? "Unit Test" : "Semester Examination"}`,
+      title: `Machine Learning Unit Test`,
       subject_code: "ML101",
       semester: "V",
       total_marks: totalMarks,

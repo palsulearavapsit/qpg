@@ -146,10 +146,10 @@
             </div>
           </div>
           <div class="glass-card stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="stat-icon"><i class="fa-solid fa-file-pdf"></i></div>
             <div class="stat-info">
-              <span class="stat-value" id="stat-semester-count">0</span>
-              <span class="stat-label">Semester Exams</span>
+              <span class="stat-value" id="stat-materials-count">0</span>
+              <span class="stat-label">Study Materials</span>
             </div>
           </div>
         </div>
@@ -213,43 +213,16 @@
         <!-- Subject Tabs -->
         <div class="tab-container">
           <div class="tab-nav">
-            <button class="tab-btn active-tab" data-tab="tab-materials">Study Materials & AI Insights</button>
+            <button class="tab-btn active-tab" data-tab="tab-materials">Syllabus & Modules</button>
             <button class="tab-btn" data-tab="tab-generate">Generate Question Paper</button>
             <button class="tab-btn" data-tab="tab-archive">Paper Archive</button>
           </div>
 
-          <!-- TAB 1: STUDY MATERIALS & AI INSIGHTS -->
+          <!-- TAB 1: SYLLABUS & MODULES -->
           <div class="tab-content active-content" id="tab-materials">
-            <div class="upload-zone" id="material-drag-drop-zone">
-              <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
-              <h3 class="upload-title">Drag & Drop Notes, Study Materials or Previous Papers</h3>
-              <p class="upload-subtitle">Supports PDF, DOCX, PPT, or TXT (Max 15MB)</p>
-              <input type="file" id="upload-file-input" style="display: none;" multiple>
-              <button class="btn btn-secondary" style="margin-top: 16px;" onclick="document.getElementById('upload-file-input').click()">Browse Files</button>
-            </div>
-
-            <div class="material-topic-grid" style="margin-top: 32px;">
-              <!-- Uploaded Materials List -->
-              <div class="list-container">
-                <div class="list-header">
-                  <span>Uploaded Documents</span>
-                  <span class="badge badge-info" id="badge-materials-count">0 Files</span>
-                </div>
-                <div id="uploaded-materials-list" style="display: flex; flex-direction: column; gap: 8px;">
-                  <!-- Dynamic materials file item list row entries -->
-                </div>
-              </div>
-
-              <!-- AI Extracted Concepts/Topics -->
-              <div class="list-container">
-                <div class="list-header">
-                  <span>AI-Extracted Key Topics</span>
-                  <span class="badge badge-success" id="badge-topics-count">0 Topics</span>
-                </div>
-                <div id="ai-topics-container" class="tag-cloud">
-                  <!-- Dynamic topics checklist tags -->
-                </div>
-              </div>
+            <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 14px;">Manage study materials, class notes, and previous year papers grouped by module. AI will extract key concepts per module to construct your question papers.</p>
+            <div id="modules-card-grid">
+              <!-- Modules 1 to 6 and Past Papers cards injected here dynamically -->
             </div>
           </div>
 
@@ -259,14 +232,28 @@
               <form id="form-paper-generation-settings">
                 
                 <div class="form-group">
-                  <label class="form-label">Select Exam Type</label>
-                  <select class="form-control" id="generator-exam-type" required>
-                    <option value="unit_test">Unit Test (20 Marks)</option>
-                    <option value="semester">Semester Examination (60 Marks)</option>
-                  </select>
+                  <label class="form-label">Exam Type</label>
+                  <div class="form-control" style="background: rgba(255, 255, 255, 0.02); display: flex; align-items: center; justify-content: space-between; opacity: 0.85; border: 1px solid var(--border-color); height: 42px; padding: 0 16px; border-radius: var(--radius-sm);">
+                    <span style="font-size: 14px; font-weight: 500;">Unit Test (20 Marks)</span>
+                    <span class="badge badge-info" style="margin: 0; font-size: 11px;">UT Only</span>
+                  </div>
+                  <!-- Hidden input to preserve code logic for generator-exam-type -->
+                  <input type="hidden" id="generator-exam-type" value="unit_test">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="margin-top: 20px;">
+                  <label class="form-label">Select Modules to Include in this UT</label>
+                  <div class="module-selector-container" id="generator-module-selection">
+                    <div class="module-select-chip active" data-module="1">Mod 1</div>
+                    <div class="module-select-chip active" data-module="2">Mod 2</div>
+                    <div class="module-select-chip" data-module="3">Mod 3</div>
+                    <div class="module-select-chip" data-module="4">Mod 4</div>
+                    <div class="module-select-chip" data-module="5">Mod 5</div>
+                    <div class="module-select-chip" data-module="6">Mod 6</div>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
                   <label class="form-label">Paper Model Code</label>
                   <select class="form-control" id="generator-model-code" required>
                     <option value="Model 123">Model 123</option>
@@ -294,32 +281,9 @@
                   </div>
                 </div>
 
-                <!-- SEMESTER EXAMINATION CONFIGURATION CONTAINER -->
-                <div id="semester-generator-config" style="display: none;">
-                  <div class="form-group">
-                    <label class="form-label">Number of Questions</label>
-                    <input type="number" class="form-control" id="sem-num-questions" min="1" max="10" value="5" required>
-                  </div>
-                  
-                  <div class="form-group">
-                    <label class="form-label">Marks Per Question (Total sum must equal 60)</label>
-                    <input type="number" class="form-control" id="sem-marks-per-question" min="1" max="60" value="12" required>
-                  </div>
-
-                  <div class="form-group">
-                    <label class="form-label">Choice Structure Pattern</label>
-                    <select class="form-control" id="sem-choice-type" required>
-                      <option value="one_out_of_two">One Out of Two (Q(N)A OR Q(N)B)</option>
-                      <option value="two_out_of_three">Two Out of Three (Answer any two of Q(N)A, B, C)</option>
-                      <option value="one_out_of_three">One Out of Three (Answer any one of Q(N)A, B, C)</option>
-                      <option value="none">No Choice (Direct mandatory questions)</option>
-                    </select>
-                  </div>
-                </div>
-
                 <div class="form-group" style="margin-top: 24px;">
                   <label class="form-label">Verify Selected Generation Topics</label>
-                  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ensure at least 2 topics are selected in the 'Study Materials' tab to generate balanced syllabus coverage.</p>
+                  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Ensure at least 2 topics are selected in the 'Syllabus & Modules' tab to generate balanced syllabus coverage.</p>
                   <div id="generator-selected-topics-list" style="font-size: 13px; color: var(--text-secondary); font-style: italic;">
                     No topics selected.
                   </div>
@@ -444,10 +408,10 @@
             </div>
           </div>
           <div class="glass-card stat-card">
-            <div class="stat-icon"><i class="fa-solid fa-chart-pie"></i></div>
+            <div class="stat-icon"><i class="fa-solid fa-file-lines"></i></div>
             <div class="stat-info">
-              <span class="stat-value" id="hod-stat-ratio">0%</span>
-              <span class="stat-label">UT to Sem Exam Ratio</span>
+              <span class="stat-value" id="hod-stat-ratio">0</span>
+              <span class="stat-label">Total Study Materials</span>
             </div>
           </div>
         </div>
@@ -516,9 +480,9 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3 class="modal-title">Add New Subject</h3>
-          <button class="modal-close" id="btn-close-modal-add-subject">&times;</button>
+          <button class="modal-close" id="btn-close-modal-add-subject" style="font-size: 24px; color: var(--text-secondary);"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="form-add-subject">
+        <form id="form-add-subject" class="modal-body">
           <div class="form-group">
             <label class="form-label">Subject Name</label>
             <input type="text" class="form-control" id="modal-subject-name" required placeholder="e.g. Machine Learning">
@@ -536,6 +500,55 @@
             <button type="submit" class="btn btn-primary">Create Subject</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- MODULE WORKSPACE MODAL -->
+    <div class="modal-overlay" id="modal-module-workspace" style="display: none;">
+      <div class="modal-card" style="max-width: 800px; width: 90%;">
+        <div class="modal-header">
+          <h3 class="modal-title" id="module-workspace-modal-title">Module 1 Workspace</h3>
+          <button class="modal-close" id="btn-close-modal-module-workspace" style="font-size: 24px; color: var(--text-secondary);"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        
+        <div class="modal-body" style="padding-top: 16px; display: flex; flex-direction: column; gap: 16px;">
+          <!-- Upload Zone -->
+          <div class="upload-zone" id="module-material-drag-drop-zone">
+            <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+            <h3 class="upload-title" id="module-upload-title">Drag & Drop Notes or Materials</h3>
+            <p class="upload-subtitle">Supports PDF, DOCX, PPT, or TXT (Max 15MB)</p>
+            <input type="file" id="module-upload-file-input" style="display: none;" multiple>
+            <button class="btn btn-secondary" style="margin-top: 16px;" onclick="document.getElementById('module-upload-file-input').click()">Browse Files</button>
+          </div>
+
+          <div class="material-topic-grid" style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Uploaded Materials List -->
+            <div class="list-container" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-weight: 600;">Uploaded Documents</span>
+                <span class="badge badge-info" id="module-badge-materials-count">0 Files</span>
+              </div>
+              <div id="module-uploaded-materials-list" style="display: flex; flex-direction: column; gap: 8px; max-height: 250px; overflow-y: auto; padding-right: 4px;">
+                <!-- Dynamic materials file item list row entries -->
+              </div>
+            </div>
+
+            <!-- AI Extracted Concepts/Topics -->
+            <div class="list-container" style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <div class="list-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <span style="font-weight: 600;">AI-Extracted Key Topics</span>
+                <span class="badge badge-success" id="module-badge-topics-count">0 Topics</span>
+              </div>
+              <div id="module-ai-topics-container" class="tag-cloud" style="max-height: 250px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 6px; padding-right: 4px;">
+                <!-- Dynamic topics checklist tags -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+          <button type="button" class="btn btn-primary" id="btn-close-module-workspace">Done</button>
+        </div>
       </div>
     </div>
 

@@ -10,8 +10,26 @@ const State = {
   subjects: [],
   materials: [],
   extractedTopics: [],
-  selectedTopics: new Set()
+  selectedTopics: new Set(),
+  activeModule: null,
+  selectedModules: new Set([1, 2])
 };
+
+// --- UTILITY FILENAME PREFIX HELPERS ---
+function getMaterialModule(name) {
+  if (name.startsWith("[Module 1]")) return 1;
+  if (name.startsWith("[Module 2]")) return 2;
+  if (name.startsWith("[Module 3]")) return 3;
+  if (name.startsWith("[Module 4]")) return 4;
+  if (name.startsWith("[Module 5]")) return 5;
+  if (name.startsWith("[Module 6]")) return 6;
+  if (name.startsWith("[Past Papers]")) return 7;
+  return null;
+}
+
+function stripModulePrefix(name) {
+  return name.replace(/^\[Module [1-6]\]\s*/, '').replace(/^\[Past Papers\]\s*/, '');
+}
 
 // --- INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", async () => {
@@ -248,6 +266,12 @@ function setupEventListeners() {
     document.getElementById("modal-add-subject").style.display = "none";
   });
 
+  document.getElementById("modal-add-subject").addEventListener("click", (e) => {
+    if (e.target.id === "modal-add-subject") {
+      document.getElementById("modal-add-subject").style.display = "none";
+    }
+  });
+
   // Add Subject Submit Form
   document.getElementById("form-add-subject").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -330,17 +354,74 @@ function setupEventListeners() {
     }
   });
 
-  // Generator Exam Type toggle
-  document.getElementById("generator-exam-type").addEventListener("change", (e) => {
-    const isUnitTest = e.target.value === "unit_test";
-    if (isUnitTest) {
-      document.getElementById("ut-generator-config").style.display = "block";
-      document.getElementById("semester-generator-config").style.display = "none";
-    } else {
-      document.getElementById("ut-generator-config").style.display = "none";
-      document.getElementById("semester-generator-config").style.display = "block";
+  // Close Module Workspace Dialog
+  document.getElementById("btn-close-modal-module-workspace").addEventListener("click", () => {
+    document.getElementById("modal-module-workspace").style.display = "none";
+  });
+  
+  document.getElementById("btn-close-module-workspace").addEventListener("click", () => {
+    document.getElementById("modal-module-workspace").style.display = "none";
+  });
+
+  document.getElementById("modal-module-workspace").addEventListener("click", (e) => {
+    if (e.target.id === "modal-module-workspace") {
+      document.getElementById("modal-module-workspace").style.display = "none";
     }
   });
+
+  // Paper generator module selection chip toggle
+  const selectionContainer = document.getElementById("generator-module-selection");
+  if (selectionContainer) {
+    selectionContainer.addEventListener("click", (e) => {
+      const chip = e.target.closest(".module-select-chip");
+      if (!chip) return;
+      
+      const modVal = parseInt(chip.getAttribute("data-module"));
+      if (State.selectedModules.has(modVal)) {
+        // Enforce at least one module selected
+        if (State.selectedModules.size > 1) {
+          State.selectedModules.delete(modVal);
+          chip.classList.remove("active");
+        } else {
+          showToast("Please select at least one module for the Unit Test.", "warning");
+        }
+      } else {
+        State.selectedModules.add(modVal);
+        chip.classList.add("active");
+      }
+      
+      updateGeneratorTopicsFromSelectedModules();
+    });
+  }
+
+  // Module drag and drop events
+  const moduleDragZone = document.getElementById("module-material-drag-drop-zone");
+  const moduleFileInput = document.getElementById("module-upload-file-input");
+
+  if (moduleDragZone && moduleFileInput) {
+    moduleDragZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      moduleDragZone.classList.add("dragover");
+    });
+
+    moduleDragZone.addEventListener("dragleave", () => {
+      moduleDragZone.classList.remove("dragover");
+    });
+
+    moduleDragZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      moduleDragZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length > 0) {
+        handleModuleFilesUpload(e.dataTransfer.files);
+      }
+    });
+
+    moduleFileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleModuleFilesUpload(e.target.files);
+      }
+    });
+  }
 
   // Generate Question Paper Submit Form
   document.getElementById("form-paper-generation-settings").addEventListener("submit", async (e) => {
@@ -403,11 +484,10 @@ async function renderTeacherDashboard() {
       `).join("");
     }
 
-    // 2. Fetch Recent Papers
-    // Collect all papers across all subjects
+    // 2. Fetch Recent Papers and Materials Count
     let allPapersList = [];
     let utCount = 0;
-    let semCount = 0;
+    let totalMaterialsCount = 0;
     
     for (const sub of subjects) {
       const papers = await DatabaseService.getPapers(sub.id);
@@ -418,13 +498,15 @@ async function renderTeacherDashboard() {
           subjectName: sub.name
         });
         if (p.exam_type === 'unit_test') utCount++;
-        if (p.exam_type === 'semester') semCount++;
       });
+      
+      const materials = await DatabaseService.getMaterials(sub.id);
+      totalMaterialsCount += materials.length;
     }
 
     document.getElementById("stat-papers-count").innerText = allPapersList.length;
     document.getElementById("stat-ut-count").innerText = utCount;
-    document.getElementById("stat-semester-count").innerText = semCount;
+    document.getElementById("stat-materials-count").innerText = totalMaterialsCount;
 
     // Sort papers by date desc
     allPapersList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -473,6 +555,17 @@ async function renderSubjectWorkspace() {
   document.getElementById("subject-workspace-title").innerText = sub.name;
   document.getElementById("subject-workspace-subtitle").innerText = `Semester ${sub.semester} • Subject Code: ${sub.code}`;
 
+  // Reset selected modules to 1 & 2 by default
+  State.selectedModules = new Set([1, 2]);
+  document.querySelectorAll(".module-select-chip").forEach(chip => {
+    const mod = parseInt(chip.getAttribute("data-module"));
+    if (mod === 1 || mod === 2) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+
   // Reset topics checklist
   State.extractedTopics = [];
   State.selectedTopics.clear();
@@ -490,93 +583,194 @@ async function renderSubjectWorkspace() {
 
 async function refreshMaterials() {
   const sub = State.activeSubject;
-  const materialsList = document.getElementById("uploaded-materials-list");
-  const topicsContainer = document.getElementById("ai-topics-container");
+  const grid = document.getElementById("modules-card-grid");
+  if (!grid) return;
   
-  materialsList.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading documents...</div>`;
-  topicsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Extracting topics...</div>`;
+  grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 40px;">Loading modules...</div>`;
 
   try {
     const materials = await DatabaseService.getMaterials(sub.id);
     State.materials = materials;
-    
-    document.getElementById("badge-materials-count").innerText = `${materials.length} Files`;
 
-    if (materials.length === 0) {
-      materialsList.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: var(--radius-md);">No study documents uploaded yet.</div>`;
-      topicsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Upload materials to extract AI concept lists.</div>`;
-      document.getElementById("badge-topics-count").innerText = "0 Topics";
-      updateGeneratorTopicsText();
-      return;
+    // Group and render modules 1-6 + Past Papers (7)
+    let gridHtml = "";
+    for (let m = 1; m <= 7; m++) {
+      const moduleMaterials = materials.filter(mat => {
+        const modNum = getMaterialModule(mat.name);
+        // If uncategorized, treat as Module 1
+        if (modNum === null && m === 1) return true;
+        return modNum === m;
+      });
+      
+      const moduleTopics = new Set();
+      moduleMaterials.forEach(mat => {
+        if (Array.isArray(mat.extracted_topics)) {
+          mat.extracted_topics.forEach(t => moduleTopics.add(t));
+        }
+      });
+      
+      const isPastPapers = m === 7;
+      const title = isPastPapers ? "Previous Year Papers" : `Module ${m} Materials`;
+      const label = isPastPapers ? "PYQ" : `Module ${m}`;
+      const icon = isPastPapers ? "fa-file-signature" : "fa-folder-open";
+
+      gridHtml += `
+        <div class="glass-card module-card" onclick="openModuleWorkspace(${m})">
+          <div class="module-card-header">
+            <div class="module-icon"><i class="fa-solid ${icon}"></i></div>
+            <span class="module-number">${label}</span>
+          </div>
+          <h3 class="module-title">${title}</h3>
+          <div class="module-summary">
+            <span class="badge badge-info" style="font-size: 11px; padding: 4px 8px;"><i class="fa-solid fa-file" style="margin-right: 4px;"></i> ${moduleMaterials.length} Files</span>
+            <span class="badge badge-success" style="font-size: 11px; padding: 4px 8px;"><i class="fa-solid fa-brain" style="margin-right: 4px;"></i> ${moduleTopics.size} Topics</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 12px; font-size: 13px; padding: 6px;">Open Module <i class="fa-solid fa-arrow-right" style="margin-left: 4px; font-size: 10px;"></i></button>
+        </div>
+      `;
     }
-
-    // Render materials
-    materialsList.innerHTML = materials.map(m => `
-      <div class="list-item">
-        <span class="item-name"><i class="fa-solid ${m.type === 'notes' ? 'fa-file-lines' : 'fa-file-signature'}" style="color: var(--primary-color);"></i> ${m.name}</span>
-        <span class="user-role">${new Date(m.created_at).toLocaleDateString()}</span>
-      </div>
-    `).join("");
-
-    // Collect all extracted topics from uploaded files
-    const allTopics = new Set();
-    materials.forEach(m => {
-      if (Array.isArray(m.extracted_topics)) {
-        m.extracted_topics.forEach(t => allTopics.add(t));
-      }
-    });
-
-    State.extractedTopics = Array.from(allTopics);
-    document.getElementById("badge-topics-count").innerText = `${State.extractedTopics.length} Topics`;
-
-    // Automatically check all topics by default
-    State.extractedTopics.forEach(t => State.selectedTopics.add(t));
-
-    // Render tags checkable
-    topicsContainer.innerHTML = State.extractedTopics.map(topic => `
-      <button class="topic-tag active" data-topic="${topic}" onclick="toggleTopicTag(this)">
-        <i class="fa-solid fa-circle-check"></i> ${topic}
-      </button>
-    `).join("");
-
-    updateGeneratorTopicsText();
+    
+    grid.innerHTML = gridHtml;
+    
+    // Update active topics for paper generation
+    updateGeneratorTopicsFromSelectedModules();
 
   } catch (error) {
-    console.error("Failed to fetch materials:", error);
-    showToast("Error retrieving materials list", "error");
+    console.error("Failed to refresh modules:", error);
+    showToast("Error retrieving modules materials", "error");
   }
 }
 
-// Toggle selection state of topic tag
-function toggleTopicTag(element) {
-  const topic = element.getAttribute("data-topic");
-  if (State.selectedTopics.has(topic)) {
-    State.selectedTopics.delete(topic);
-    element.classList.remove("active");
-    element.querySelector("i").className = "fa-regular fa-circle";
-  } else {
-    State.selectedTopics.add(topic);
-    element.classList.add("active");
-    element.querySelector("i").className = "fa-solid fa-circle-check";
-  }
+// Group topics inside the selected modules and update checkboxes
+function updateGeneratorTopicsFromSelectedModules() {
+  const materials = State.materials || [];
+  const selectedTopicsSet = new Set();
+  
+  materials.forEach(m => {
+    const modNum = getMaterialModule(m.name);
+    const normalizedMod = modNum === null ? 1 : modNum;
+    
+    if (State.selectedModules.has(normalizedMod)) {
+      if (Array.isArray(m.extracted_topics)) {
+        m.extracted_topics.forEach(t => selectedTopicsSet.add(t));
+      }
+    }
+  });
+  
+  State.selectedTopics = selectedTopicsSet;
   updateGeneratorTopicsText();
 }
-window.toggleTopicTag = toggleTopicTag; // expose to click
 
-// Update selected topics summary inside generator view
-function updateGeneratorTopicsText() {
-  const textDiv = document.getElementById("generator-selected-topics-list");
-  if (State.selectedTopics.size === 0) {
-    textDiv.innerHTML = `<span style="color: var(--danger-color); font-weight: 500;">No topics selected. Select topics in the "Study Materials" tab first.</span>`;
+// Open module detailed view dialog
+function openModuleWorkspace(moduleNum) {
+  State.activeModule = moduleNum;
+  
+  const modal = document.getElementById("modal-module-workspace");
+  const modalTitle = document.getElementById("module-workspace-modal-title");
+  
+  const isPastPapers = moduleNum === 7;
+  modalTitle.innerText = isPastPapers ? "Previous Year Papers Workspace" : `Module ${moduleNum} Workspace`;
+  
+  const uploadTitle = document.getElementById("module-upload-title");
+  uploadTitle.innerText = isPastPapers 
+    ? "Drag & Drop Previous Year Papers" 
+    : `Drag & Drop Module ${moduleNum} Notes / Materials`;
+
+  refreshModuleWorkspaceDetails();
+  
+  modal.style.display = "flex";
+}
+window.openModuleWorkspace = openModuleWorkspace;
+
+// Renders the list of files and topics inside open module modal
+function refreshModuleWorkspaceDetails() {
+  const moduleNum = State.activeModule;
+  const materialsList = document.getElementById("module-uploaded-materials-list");
+  const topicsContainer = document.getElementById("module-ai-topics-container");
+  
+  if (!materialsList || !topicsContainer) return;
+  
+  const filtered = State.materials.filter(m => {
+    const modNum = getMaterialModule(m.name);
+    if (modNum === null && moduleNum === 1) return true;
+    return modNum === moduleNum;
+  });
+  
+  document.getElementById("module-badge-materials-count").innerText = `${filtered.length} Files`;
+
+  if (filtered.length === 0) {
+    materialsList.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">No documents uploaded to this module yet.</div>`;
+    topicsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">Upload notes to extract concepts.</div>`;
+    document.getElementById("module-badge-topics-count").innerText = "0 Topics";
+    return;
+  }
+  
+  // Render documents list
+  materialsList.innerHTML = filtered.map(m => {
+    const displayName = stripModulePrefix(m.name);
+    return `
+      <div class="list-item" style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.02); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); width: 100%;">
+        <span class="item-name" style="font-size: 13px; color: var(--text-secondary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 240px;" title="${displayName}">
+          <i class="fa-solid ${m.type === 'notes' ? 'fa-file-lines' : 'fa-file-signature'}" style="color: var(--primary-color); margin-right: 6px;"></i> ${displayName}
+        </span>
+        <button class="btn btn-icon-sm btn-danger" title="Delete file" onclick="deleteModuleMaterial('${m.id}')" style="margin-left: auto;">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+  }).join("");
+  
+  // Extracted topics
+  const topics = new Set();
+  filtered.forEach(m => {
+    if (Array.isArray(m.extracted_topics)) {
+      m.extracted_topics.forEach(t => topics.add(t));
+    }
+  });
+  
+  document.getElementById("module-badge-topics-count").innerText = `${topics.size} Topics`;
+  
+  if (topics.size === 0) {
+    topicsContainer.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px; width: 100%;">No topics extracted yet.</div>`;
   } else {
-    textDiv.innerHTML = Array.from(State.selectedTopics).map(t => `• ${t}`).join("<br>");
+    topicsContainer.innerHTML = Array.from(topics).map(topic => `
+      <span class="badge badge-success" style="font-size: 11px; padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(16, 185, 129, 0.2);"><i class="fa-solid fa-brain" style="margin-right: 6px;"></i> ${topic}</span>
+    `).join("");
   }
 }
 
-// Handle Notes / Previous Papers File Uploads
-async function handleFilesUpload(filesList) {
+// Delete material handler inside workspace details view
+async function deleteModuleMaterial(materialId) {
+  showLoader(true, "Deleting document...");
+  try {
+    const { error } = await supabaseClient
+      .from('materials')
+      .delete()
+      .eq('id', materialId);
+      
+    if (error) throw error;
+    showToast("Document deleted successfully.", "info");
+    
+    // Refresh
+    const sub = State.activeSubject;
+    const materials = await DatabaseService.getMaterials(sub.id);
+    State.materials = materials;
+    refreshModuleWorkspaceDetails();
+    await refreshMaterials();
+  } catch (error) {
+    console.error(error);
+    showToast("Failed to delete document", "error");
+  } finally {
+    showLoader(false);
+  }
+}
+window.deleteModuleMaterial = deleteModuleMaterial;
+
+// Handles file uploads to a specific module
+async function handleModuleFilesUpload(filesList) {
   const sub = State.activeSubject;
-  if (!sub) return;
+  const moduleNum = State.activeModule;
+  if (!sub || !moduleNum) return;
 
   showLoader(true, "Analyzing and uploading files...");
 
@@ -585,9 +779,7 @@ async function handleFilesUpload(filesList) {
       const file = filesList[i];
       let extracted = [];
       
-      // Attempt local mock parse based on file content/name
       if (file.name.endsWith('.txt')) {
-        // Read file contents for keyword parsing
         const fileContent = await new Promise((resolve) => {
           const reader = new FileReader();
           reader.onload = (e) => resolve(e.target.result);
@@ -595,21 +787,27 @@ async function handleFilesUpload(filesList) {
         });
         extracted = AIEngine.extractTopics(file.name, fileContent);
       } else {
-        // Parse purely based on filename (for PDFs/Word/PPT binaries)
         extracted = AIEngine.extractTopics(file.name, "");
       }
 
-      // Determine material type based on name keywords
-      const isPrevPaper = file.name.toLowerCase().includes("paper") || 
+      const isPrevPaper = moduleNum === 7 || 
+                           file.name.toLowerCase().includes("paper") || 
                            file.name.toLowerCase().includes("exam") || 
                            file.name.toLowerCase().includes("test");
       const type = isPrevPaper ? 'previous_paper' : 'notes';
 
-      // Save to database
-      await DatabaseService.uploadMaterial(sub.id, file.name, type, extracted);
+      // Prefix filename with module details
+      const prefix = moduleNum === 7 ? "[Past Papers] " : `[Module ${moduleNum}] `;
+      const prefixedName = prefix + file.name;
+
+      await DatabaseService.uploadMaterial(sub.id, prefixedName, type, extracted);
     }
 
-    showToast("Documents uploaded and AI topics extracted!", "success");
+    showToast("Documents uploaded and AI topics extracted for this module!", "success");
+    
+    const materials = await DatabaseService.getMaterials(sub.id);
+    State.materials = materials;
+    refreshModuleWorkspaceDetails();
     await refreshMaterials();
 
   } catch (error) {
@@ -618,6 +816,24 @@ async function handleFilesUpload(filesList) {
   } finally {
     showLoader(false);
   }
+}
+
+// Update checkable topics checklist under generator setting form
+function updateGeneratorTopicsText() {
+  const container = document.getElementById("generator-selected-topics-list");
+  if (!container) return;
+  
+  if (State.selectedTopics.size === 0) {
+    container.innerHTML = `<span style="color: var(--danger-color); font-weight: 500;">No topics found in the selected modules. Please upload study materials to these modules.</span>`;
+    return;
+  }
+  
+  container.innerHTML = Array.from(State.selectedTopics).map(topic => `
+    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer; user-select: none;">
+      <input type="checkbox" checked value="${topic}" class="generator-topic-checkbox" style="width: 16px; height: 16px; accent-color: var(--primary-color);">
+      <span>${topic}</span>
+    </label>
+  `).join("");
 }
 
 async function refreshSubjectArchive() {
@@ -658,56 +874,34 @@ async function generatePaperWorkflow() {
   const sub = State.activeSubject;
   if (!sub) return;
 
+  const checkedBoxes = document.querySelectorAll(".generator-topic-checkbox:checked");
+  const topicsArr = Array.from(checkedBoxes).map(cb => cb.value);
+
   // Validation: Check if topics are selected
-  if (State.selectedTopics.size === 0) {
-    showToast("Please select at least one concept/topic from study materials.", "error");
+  if (topicsArr.length === 0) {
+    showToast("Please check/select at least one topic to generate the paper.", "error");
     return;
   }
 
-  const examType = document.getElementById("generator-exam-type").value;
+  const examType = "unit_test";
   const modelNumber = document.getElementById("generator-model-code").value;
   
   let totalMarks = 20;
-  let markingSchemeStr = "8 + 7 + 5";
-  let choiceStructure = {};
-
-  if (examType === "unit_test") {
-    totalMarks = 20;
-    markingSchemeStr = document.getElementById("ut-marking-scheme").value;
-    
-    // Validate marking scheme split
-    const split = markingSchemeStr.split("+").map(x => parseInt(x.trim()));
-    const sum = split.reduce((acc, curr) => acc + (isNaN(curr) ? 0 : curr), 0);
-    
-    if (sum !== 20 || split.some(isNaN)) {
-      showToast("Unit Test marking scheme split must sum up to exactly 20 marks. (e.g. 8+7+5)", "error");
-      return;
-    }
-    
-    choiceStructure = {
-      markingList: split,
-      choiceType: "one_out_of_two"
-    };
-  } else {
-    // Semester Exam (60 marks)
-    totalMarks = 60;
-    const numQ = parseInt(document.getElementById("sem-num-questions").value);
-    const marksPerQ = parseInt(document.getElementById("sem-marks-per-question").value);
-    const choiceType = document.getElementById("sem-choice-type").value;
-
-    const sum = numQ * marksPerQ;
-    if (sum !== 60) {
-      showToast(`Total Marks calculated is ${sum}. For Semester Exams, total marks must equal exactly 60. (e.g. 5 questions * 12 marks = 60)`, "error");
-      return;
-    }
-
-    markingSchemeStr = Array(numQ).fill(marksPerQ).join(" + ");
-    choiceStructure = {
-      numQuestions: numQ,
-      marksPerQuestion: marksPerQ,
-      choiceType: choiceType
-    };
+  let markingSchemeStr = document.getElementById("ut-marking-scheme").value;
+  
+  // Validate marking scheme split
+  const split = markingSchemeStr.split("+").map(x => parseInt(x.trim()));
+  const sum = split.reduce((acc, curr) => acc + (isNaN(curr) ? 0 : curr), 0);
+  
+  if (sum !== 20 || split.some(isNaN)) {
+    showToast("Unit Test marking scheme split must sum up to exactly 20 marks. (e.g. 8+7+5)", "error");
+    return;
   }
+  
+  const choiceStructure = {
+    markingList: split,
+    choiceType: "one_out_of_two"
+  };
 
   // Visual Generation Stepper Simulation
   showLoader(true, "Initializing parameters...");
@@ -731,8 +925,6 @@ async function generatePaperWorkflow() {
   }
 
   try {
-    const topicsArr = Array.from(State.selectedTopics);
-    
     // Call Generation Engine
     const generatedPaper = await AIEngine.generateQuestionPaper(
       sub.name, sub.code, sub.semester, topicsArr, examType, totalMarks, modelNumber, markingSchemeStr, choiceStructure
@@ -742,7 +934,7 @@ async function generatePaperWorkflow() {
     State.activePaper = {
       id: null, // unsaved new paper
       subject_id: sub.id,
-      title: generatedPaper.title || `${sub.name} ${examType === 'unit_test' ? 'Unit Test' : 'Semester Exam'} (Model ${modelNumber})`,
+      title: generatedPaper.title || `${sub.name} Unit Test (Model ${modelNumber})`,
       exam_type: examType,
       total_marks: totalMarks,
       model_number: modelNumber,
@@ -1051,9 +1243,6 @@ window.viewArchivePaper = viewArchivePaper; // expose
 
 // Delete question paper from database
 async function deleteArchivePaper(paperId) {
-  const ok = confirm("Are you sure you want to delete this question paper? This action is permanent.");
-  if (!ok) return;
-
   showLoader(true, "Deleting paper...");
   try {
     await DatabaseService.deletePaper(paperId);
@@ -1156,8 +1345,7 @@ async function renderHODDashboard() {
     document.getElementById("hod-stat-subjects").innerText = stats.subjects;
     document.getElementById("hod-stat-papers").innerText = stats.papers;
     
-    const ratio = stats.papers > 0 ? Math.round((stats.unitTests / stats.papers) * 100) : 0;
-    document.getElementById("hod-stat-ratio").innerText = `${ratio}% UT / ${100 - ratio}% Sem`;
+    document.getElementById("hod-stat-ratio").innerText = stats.materials;
 
     // 2. Fetch Teachers Directory List
     const teachersList = await DatabaseService.getTeachersList();
