@@ -120,32 +120,41 @@ function navigateTo(viewId) {
 function setupSidebar() {
   const sidebar = document.getElementById("app-sidebar");
   const navMenu = document.getElementById("nav-menu-container");
+  const subNav = document.getElementById("app-sub-navbar");
   
   if (!State.currentUser || !State.currentProfile) {
     sidebar.style.display = "none";
+    if (subNav) subNav.style.display = "none";
     return;
   }
 
   sidebar.style.display = "flex";
+  if (subNav) subNav.style.display = "flex";
   
   // Set initials & user info
   const initials = State.currentProfile.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
   document.getElementById("user-avatar-initials").innerText = initials;
   document.getElementById("profile-user-name").innerText = State.currentProfile.name;
-  document.getElementById("profile-user-role").innerText = State.currentProfile.role === 'hod' ? 'Head of Department' : 'Faculty Instructor';
+  document.getElementById("profile-user-role").innerText = State.currentProfile.role === 'hod' ? 'HOD' : 'Faculty';
 
   // Build menu items based on role
   let menuHtml = '';
   if (State.currentProfile.role === 'hod') {
     menuHtml = `
       <button class="nav-item ${State.activeView === 'view-hod-dashboard' ? 'active' : ''}" onclick="navigateTo('view-hod-dashboard')">
-        <i class="fa-solid fa-chart-line"></i> Department Dashboard
+        <i class="fa-solid fa-chart-line"></i> Dashboard
       </button>
     `;
   } else {
     menuHtml = `
       <button class="nav-item ${State.activeView === 'view-teacher-dashboard' ? 'active' : ''}" onclick="navigateTo('view-teacher-dashboard')">
-        <i class="fa-solid fa-house"></i> Teacher Dashboard
+        <i class="fa-solid fa-house"></i> Home
+      </button>
+      <button class="nav-item" style="opacity: 0.6; cursor: not-allowed;" onclick="showToast('Courses directory is locked for other faculty divisions', 'info')">
+        <i class="fa-solid fa-graduation-cap"></i> Courses
+      </button>
+      <button class="nav-item" style="opacity: 0.6; cursor: not-allowed;" onclick="showToast('Events module calendar is coming soon!', 'info')">
+        <i class="fa-solid fa-calendar-days"></i> Events
       </button>
     `;
   }
@@ -447,6 +456,33 @@ function setupEventListeners() {
   });
 }
 
+// Dynamic thumbnail generator based on subject name and code
+function getSubjectThumbnail(code, name) {
+  const hash = code.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const colors = [
+    'linear-gradient(135deg, #3b82f6, #1d4ed8)', // Blue
+    'linear-gradient(135deg, #a855f7, #6b21a8)', // Purple
+    'linear-gradient(135deg, #f97316, #c2410c)', // Orange
+    'linear-gradient(135deg, #10b981, #047857)', // Emerald
+    'linear-gradient(135deg, #ec4899, #be185d)'  // Pink
+  ];
+  const bg = colors[hash % colors.length];
+  
+  let icon = 'fa-book';
+  const lower = name.toLowerCase();
+  if (lower.includes("machine") || lower.includes("ml") || lower.includes("intelligence") || lower.includes("ai")) icon = 'fa-brain';
+  if (lower.includes("database") || lower.includes("dbms") || lower.includes("sql")) icon = 'fa-database';
+  if (lower.includes("network") || lower.includes("cloud") || lower.includes("computing")) icon = 'fa-network-wired';
+  if (lower.includes("security") || lower.includes("crypt")) icon = 'fa-shield-halved';
+  if (lower.includes("game")) icon = 'fa-gamepad';
+  
+  return `
+    <div class="subject-thumbnail" style="width: 140px; height: 75px; background: ${bg}; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; color: #ffffff; font-size: 24px; flex-shrink: 0; box-shadow: inset 0 0 20px rgba(0,0,0,0.2);">
+      <i class="fa-solid ${icon}"></i>
+    </div>
+  `;
+}
+
 // --- TEACHER DASHBOARD VIEW CONTROLLER ---
 async function renderTeacherDashboard() {
   setupSidebar();
@@ -456,7 +492,7 @@ async function renderTeacherDashboard() {
   const subjectsGrid = document.getElementById("teacher-subjects-grid");
   const recentPapersTbody = document.getElementById("recent-papers-tbody");
   
-  subjectsGrid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">Loading subjects...</div>`;
+  subjectsGrid.innerHTML = `<div style="text-align: center; padding: 20px; color: var(--text-muted);">Loading subjects...</div>`;
   recentPapersTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading papers...</td></tr>`;
 
   try {
@@ -469,23 +505,28 @@ async function renderTeacherDashboard() {
 
     if (subjects.length === 0) {
       subjectsGrid.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-muted);">
+        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
           <i class="fa-solid fa-graduation-cap" style="font-size: 48px; margin-bottom: 16px; color: var(--border-color);"></i>
           <h3>No Subjects Added Yet</h3>
           <p style="margin-top: 8px;">Click "+ Add Subject" button in top right to get started.</p>
         </div>
       `;
     } else {
-      subjectsGrid.innerHTML = subjects.map(subject => `
-        <div class="glass-card subject-card" onclick="openSubjectWorkspace('${subject.id}')">
-          <span class="subject-code">${subject.code}</span>
-          <h3 class="subject-title">${subject.name}</h3>
-          <div class="subject-footer">
-            <span>Semester ${subject.semester}</span>
-            <span>Open Workspace <i class="fa-solid fa-arrow-right-long"></i></span>
+      subjectsGrid.innerHTML = subjects.map(subject => {
+        const thumbnail = getSubjectThumbnail(subject.code, subject.name);
+        return `
+          <div class="glass-card subject-card" onclick="openSubjectWorkspace('${subject.id}')" style="display: flex; flex-direction: row; align-items: center; gap: 20px; padding: 16px; cursor: pointer; width: 100%;">
+            ${thumbnail}
+            <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0;">
+              <h3 class="subject-title" style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${subject.code} : ${subject.name}</h3>
+              <span style="font-size: 13px; color: var(--text-secondary);">Semester ${subject.semester} • A.Y 2025-26</span>
+            </div>
+            <div style="font-size: 18px; color: var(--text-muted); margin-left: auto; padding-right: 8px;">
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+            </div>
           </div>
-        </div>
-      `).join("");
+        `;
+      }).join("");
     }
 
     // 2. Fetch Recent Papers and Materials Count

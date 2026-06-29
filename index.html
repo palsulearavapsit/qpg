@@ -14,30 +14,25 @@
 
   <div id="app-container">
     
-    <!-- NAVIGATION SIDEBAR -->
-    <aside class="sidebar" id="app-sidebar" style="display: none;">
-      <div class="brand-section">
-        <div class="brand-logo">Q</div>
-        <div class="brand-name">PaperGen AI</div>
+    <!-- TOP NAVBAR HEADER -->
+    <header class="app-header" id="app-sidebar" style="display: none;">
+      <div class="header-left">
+        <div class="brand-name-text">PCT's A. P. Shah Institute of Technology</div>
       </div>
-      
-      <nav class="nav-menu" id="nav-menu-container">
+      <div class="header-right">
+        <span class="user-role-badge" id="profile-user-role">Faculty</span>
+        <div class="user-avatar-circle" id="user-avatar-initials">PT</div>
+        <span class="user-display-name" id="profile-user-name">Professor Test</span>
+        <button class="btn-logout" id="btn-sidebar-logout" title="Log Out"><i class="fa-solid fa-power-off"></i></button>
+      </div>
+    </header>
+
+    <!-- SUB NAVBAR -->
+    <nav class="sub-navbar" id="app-sub-navbar" style="display: none;">
+      <div class="nav-menu" id="nav-menu-container">
         <!-- Dynamic Navigation Links injected here -->
-      </nav>
-      
-      <div class="sidebar-footer">
-        <div class="user-profile-info">
-          <div class="user-avatar" id="user-avatar-initials">U</div>
-          <div class="user-details">
-            <span class="user-name" id="profile-user-name">Professor Name</span>
-            <span class="user-role" id="profile-user-role">Teacher</span>
-          </div>
-        </div>
-        <button class="nav-item" id="btn-sidebar-logout" style="margin-top: 10px;">
-          <i class="fa-solid fa-right-from-bracket"></i> Logout
-        </button>
       </div>
-    </aside>
+    </nav>
 
     <!-- MAIN VIEWPORT -->
     <main class="main-viewport">
@@ -154,11 +149,15 @@
           </div>
         </div>
 
-        <!-- Subjects Section -->
-        <div>
-          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">Active Subjects</h2>
-          <div class="card-grid" id="teacher-subjects-grid">
-            <!-- Dynamic Subject Cards Injected Here -->
+        <!-- Subjects Section (Styled as Course Overview list) -->
+        <div style="margin-top: 32px;">
+          <div class="course-overview-container" style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-sm);">
+            <div class="course-overview-banner" style="background: var(--accent-color); color: #ffffff; padding: 14px 20px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; text-transform: uppercase; font-family: var(--font-display); letter-spacing: 0.5px;">
+              <i class="fa-solid fa-bars"></i> Course overview
+            </div>
+            <div id="teacher-subjects-grid" class="subjects-list-container" style="display: flex; flex-direction: column; background: var(--border-color); padding: 0; gap: 1px;">
+              <!-- Dynamic Subject cards list rows injected dynamically -->
+            </div>
           </div>
         </div>
 
