@@ -17,6 +17,7 @@ const State = {
 
 // --- UTILITY FILENAME PREFIX HELPERS ---
 function getMaterialModule(name) {
+  if (!name) return null;
   if (name.startsWith("[Module 1]")) return 1;
   if (name.startsWith("[Module 2]")) return 2;
   if (name.startsWith("[Module 3]")) return 3;
@@ -28,6 +29,7 @@ function getMaterialModule(name) {
 }
 
 function stripModulePrefix(name) {
+  if (!name) return "";
   return name.replace(/^\[Module [1-6]\]\s*/, '').replace(/^\[Past Papers\]\s*/, '');
 }
 
@@ -331,28 +333,30 @@ function setupEventListeners() {
   const dragZone = document.getElementById("material-drag-drop-zone");
   const fileInput = document.getElementById("upload-file-input");
 
-  dragZone.addEventListener("dragover", (e) => {
-    e.preventDefault();
-    dragZone.classList.add("dragover");
-  });
+  if (dragZone && fileInput) {
+    dragZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dragZone.classList.add("dragover");
+    });
 
-  dragZone.addEventListener("dragleave", () => {
-    dragZone.classList.remove("dragover");
-  });
+    dragZone.addEventListener("dragleave", () => {
+      dragZone.classList.remove("dragover");
+    });
 
-  dragZone.addEventListener("drop", (e) => {
-    e.preventDefault();
-    dragZone.classList.remove("dragover");
-    if (e.dataTransfer.files.length > 0) {
-      handleFilesUpload(e.dataTransfer.files);
-    }
-  });
+    dragZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dragZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length > 0) {
+        handleFilesUpload(e.dataTransfer.files);
+      }
+    });
 
-  fileInput.addEventListener("change", (e) => {
-    if (e.target.files.length > 0) {
-      handleFilesUpload(e.target.files);
-    }
-  });
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) {
+        handleFilesUpload(e.target.files);
+      }
+    });
+  }
 
   // Close Module Workspace Dialog
   document.getElementById("btn-close-modal-module-workspace").addEventListener("click", () => {
