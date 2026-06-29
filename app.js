@@ -169,12 +169,6 @@ function setupSidebar() {
       <button class="nav-item ${State.activeView === 'view-teacher-dashboard' ? 'active' : ''}" onclick="navigateTo('view-teacher-dashboard')">
         <i class="fa-solid fa-house"></i> Home
       </button>
-      <button class="nav-item" style="opacity: 0.6; cursor: not-allowed;" onclick="showToast('Courses directory is locked for other faculty divisions', 'info')">
-        <i class="fa-solid fa-graduation-cap"></i> Courses
-      </button>
-      <button class="nav-item" style="opacity: 0.6; cursor: not-allowed;" onclick="showToast('Events module calendar is coming soon!', 'info')">
-        <i class="fa-solid fa-calendar-days"></i> Events
-      </button>
     `;
   }
   navMenu.innerHTML = menuHtml;
