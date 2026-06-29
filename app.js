@@ -95,6 +95,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   } finally {
     showLoader(false);
   }
+  
+  // Close any subject option dropdowns when clicking outside
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".subject-options-dropdown").forEach(el => {
+      el.style.display = "none";
+    });
+  });
 });
 
 // --- NAVIGATION & ROUTER ---
@@ -524,6 +531,17 @@ async function renderTeacherDashboard() {
   try {
     // 1. Fetch Subjects
     const subjects = await DatabaseService.getSubjects(State.currentUser.id);
+    
+    // Sort subjects so pinned ones are at the top
+    const pinnedList = JSON.parse(localStorage.getItem("pinned_subjects") || "[]");
+    subjects.sort((a, b) => {
+      const aPinned = pinnedList.includes(a.id);
+      const bPinned = pinnedList.includes(b.id);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+      return 0;
+    });
+
     State.subjects = subjects;
     
     // Update stats count
@@ -540,15 +558,32 @@ async function renderTeacherDashboard() {
     } else {
       subjectsGrid.innerHTML = subjects.map(subject => {
         const thumbnail = getSubjectThumbnail(subject.code, subject.name);
+        const isPinned = pinnedList.includes(subject.id);
         return `
-          <div class="glass-card subject-card" onclick="openSubjectWorkspace('${subject.id}')" style="display: flex; flex-direction: row; align-items: center; gap: 20px; padding: 16px; cursor: pointer; width: 100%;">
+          <div class="glass-card subject-card" onclick="openSubjectWorkspace('${subject.id}')" style="display: flex; flex-direction: row; align-items: center; gap: 20px; padding: 16px; cursor: pointer; width: 100%; position: relative;">
             ${thumbnail}
             <div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0;">
-              <h3 class="subject-title" style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${subject.code} : ${subject.name}</h3>
+              <h3 class="subject-title" style="font-size: 16px; font-weight: 700; margin: 0; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; display: flex; align-items: center; gap: 6px;">
+                ${isPinned ? '<i class="fa-solid fa-thumbtack" style="color: var(--accent-color); font-size: 14px; transform: rotate(45deg);"></i>' : ''}
+                ${subject.code} : ${subject.name}
+              </h3>
               <span style="font-size: 13px; color: var(--text-secondary);">Semester ${subject.semester} • A.Y 2025-26</span>
             </div>
-            <div style="font-size: 18px; color: var(--text-muted); margin-left: auto; padding-right: 8px;">
-              <i class="fa-solid fa-ellipsis-vertical"></i>
+            
+            <!-- Options Menu -->
+            <div class="subject-options-container" style="position: relative; margin-left: auto;">
+              <button class="btn-options-dots" onclick="toggleSubjectOptions(event, '${subject.id}')" style="background: transparent; border: none; font-size: 18px; color: var(--text-muted); padding: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: var(--transition-fast);">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+              </button>
+              
+              <div class="subject-options-dropdown" id="dropdown-${subject.id}" style="display: none; position: absolute; right: 0; top: 40px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg); z-index: 100; min-width: 160px; overflow: hidden;">
+                <button class="dropdown-item" onclick="pinSubject(event, '${subject.id}')" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: transparent; text-align: left; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-primary); transition: var(--transition-fast);">
+                  <i class="fa-solid fa-thumbtack" style="width: 16px; text-align: center;"></i> ${isPinned ? 'Unpin' : 'Pin to Top'}
+                </button>
+                <button class="dropdown-item dropdown-item-danger" onclick="deleteSubjectWorkflow(event, '${subject.id}')" style="display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; border: none; background: transparent; text-align: left; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--danger-color); transition: var(--transition-fast); border-top: 1px solid var(--border-color);">
+                  <i class="fa-solid fa-trash" style="width: 16px; text-align: center;"></i> Delete Classroom
+                </button>
+              </div>
             </div>
           </div>
         `;
@@ -1491,3 +1526,61 @@ function showLoader(show, text = "Loading...") {
 function showToast(message, type = 'info') {
   return; // Disabled toast alerts per user request
 }
+
+// --- CLASSROOM / SUBJECT OPTIONS ACTION HANDLERS ---
+function toggleSubjectOptions(event, subjectId) {
+  event.stopPropagation();
+  
+  document.querySelectorAll(".subject-options-dropdown").forEach(el => {
+    if (el.id !== `dropdown-${subjectId}`) {
+      el.style.display = "none";
+    }
+  });
+  
+  const dropdown = document.getElementById(`dropdown-${subjectId}`);
+  if (dropdown) {
+    dropdown.style.display = dropdown.style.display === "block" ? "none" : "block";
+  }
+}
+window.toggleSubjectOptions = toggleSubjectOptions;
+
+function pinSubject(event, subjectId) {
+  event.stopPropagation();
+  
+  const pinned = JSON.parse(localStorage.getItem("pinned_subjects") || "[]");
+  const idx = pinned.indexOf(subjectId);
+  
+  if (idx > -1) {
+    pinned.splice(idx, 1);
+  } else {
+    pinned.push(subjectId);
+  }
+  
+  localStorage.setItem("pinned_subjects", JSON.stringify(pinned));
+  renderTeacherDashboard();
+}
+window.pinSubject = pinSubject;
+
+async function deleteSubjectWorkflow(event, subjectId) {
+  event.stopPropagation();
+  
+  showLoader(true, "Deleting classroom...");
+  try {
+    await DatabaseService.deleteSubject(subjectId);
+    
+    // Unpin if it was pinned
+    const pinned = JSON.parse(localStorage.getItem("pinned_subjects") || "[]");
+    const idx = pinned.indexOf(subjectId);
+    if (idx > -1) {
+      pinned.splice(idx, 1);
+      localStorage.setItem("pinned_subjects", JSON.stringify(pinned));
+    }
+    
+    await renderTeacherDashboard();
+  } catch (error) {
+    console.error("Error deleting classroom:", error);
+  } finally {
+    showLoader(false);
+  }
+}
+window.deleteSubjectWorkflow = deleteSubjectWorkflow;

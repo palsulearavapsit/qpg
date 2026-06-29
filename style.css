@@ -1415,3 +1415,23 @@ body.dark-theme .toast {
   color: var(--text-primary);
 }
 
+/* --- OPTIONS DROPDOWN MENUS --- */
+.btn-options-dots:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary) !important;
+}
+
+body.dark-theme .btn-options-dots:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.subject-options-dropdown .dropdown-item:hover {
+  background: var(--bg-surface-hover);
+  color: var(--primary-color);
+}
+
+.subject-options-dropdown .dropdown-item-danger:hover {
+  background: rgba(239, 68, 68, 0.08) !important;
+  color: var(--danger-color) !important;
+}
+

@@ -151,6 +151,33 @@ const DatabaseService = {
     return data[0];
   },
 
+  async deleteSubject(subjectId) {
+    if (!isDbConfigured()) throw new Error("Database not connected.");
+    
+    // 1. Delete associated papers
+    const { error: papersError } = await supabaseClient
+      .from('papers')
+      .delete()
+      .eq('subject_id', subjectId);
+    if (papersError) throw papersError;
+
+    // 2. Delete associated materials
+    const { error: materialsError } = await supabaseClient
+      .from('materials')
+      .delete()
+      .eq('subject_id', subjectId);
+    if (materialsError) throw materialsError;
+
+    // 3. Delete subject
+    const { error: subjectError } = await supabaseClient
+      .from('subjects')
+      .delete()
+      .eq('id', subjectId);
+    if (subjectError) throw subjectError;
+
+    return true;
+  },
+
   // --- STUDY MATERIAL SERVICES ---
   
   async uploadMaterial(subjectId, name, type, extractedTopics) {
