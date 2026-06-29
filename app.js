@@ -2001,7 +2001,12 @@ async function submitPasswordRequestWorkflow(event) {
     alert(`✅ Your password reset request has been sent to the HOD.\n\nIf the HOD rejects it, please contact the System Admin at admin@apsit.edu.in.`);
   } catch (err) {
     console.error("Failed to submit request:", err);
-    alert(err.message || "Failed to send request. Please try again.");
+    const msg = (err.message || "").toLowerCase();
+    if (msg.includes("permission denied") || msg.includes("does not exist") || msg.includes("password_requests")) {
+      alert("⚠️ The password reset feature is not yet set up.\n\nPlease contact the System Admin or HOD directly to reset your password.");
+    } else {
+      alert(err.message || "Failed to send request. Please try again.");
+    }
   } finally {
     showLoader(false);
   }
