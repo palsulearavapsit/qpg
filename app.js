@@ -1489,28 +1489,5 @@ function showLoader(show, text = "Loading...") {
 
 // Show animated Toast Alerts
 function showToast(message, type = 'info') {
-  const container = document.getElementById("toast-messages-container");
-  const toast = document.createElement("div");
-  toast.className = `toast toast-${type}`;
-  
-  let icon = 'fa-circle-info';
-  if (type === 'success') icon = 'fa-circle-check';
-  if (type === 'error') icon = 'fa-triangle-exclamation';
-  
-  toast.innerHTML = `
-    <i class="fa-solid ${icon}"></i>
-    <span>${message}</span>
-  `;
-  
-  container.appendChild(toast);
-  
-  // Auto remove after 4.5 seconds
-  setTimeout(() => {
-    toast.style.animation = 'slideIn 0.3s ease reverse';
-    setTimeout(() => {
-      if (toast.parentNode === container) {
-        container.removeChild(toast);
-      }
-    }, 300);
-  }, 4500);
+  return; // Disabled toast alerts per user request
 }
