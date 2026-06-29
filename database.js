@@ -82,6 +82,53 @@ const DatabaseService = {
 
   async signIn(email, password) {
     if (!isDbConfigured()) throw new Error("Supabase is not configured. Please fill config.js with valid credentials.");
+
+    const ADMIN_EMAIL = "admin@apsit.edu.in";
+    const ADMIN_PASSWORD = "admin";
+
+    // --- ADMIN AUTO-BOOTSTRAP ---
+    // If someone logs in as the hardcoded admin, create/verify the account automatically
+    if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
+      // Try to sign in first
+      const { data: adminData, error: adminErr } = await supabaseClient.auth.signInWithPassword({
+        email: ADMIN_EMAIL, password: ADMIN_PASSWORD
+      });
+
+      let adminUser = adminData?.user || null;
+
+      // If auth account doesn't exist yet, create it
+      if (adminErr || !adminUser) {
+        const { data: signUpData, error: signUpErr } = await supabaseClient.auth.signUp({
+          email: ADMIN_EMAIL, password: ADMIN_PASSWORD
+        });
+        if (signUpErr) throw new Error("Admin account setup failed: " + signUpErr.message);
+        adminUser = signUpData.user;
+      }
+
+      if (!adminUser) throw new Error("Admin login failed.");
+
+      // Upsert admin profile row
+      const adminProfile = {
+        id: adminUser.id,
+        name: "System Admin",
+        email: ADMIN_EMAIL,
+        role: "admin",
+        password_text: ADMIN_PASSWORD,
+        created_at: new Date().toISOString()
+      };
+      try {
+        await supabaseClient.from('profiles').upsert([adminProfile], { onConflict: 'id' });
+      } catch (e) {
+        // Try insert/update separately as fallback
+        try {
+          await supabaseClient.from('profiles').insert([adminProfile]);
+        } catch (_) {
+          await supabaseClient.from('profiles').update({ role: 'admin', name: 'System Admin', password_text: ADMIN_PASSWORD }).eq('email', ADMIN_EMAIL);
+        }
+      }
+
+      return { user: adminUser, profile: adminProfile };
+    }
     
     // 1. Look up profile in database table (which HOD may have created)
     let dbProfile = null;
