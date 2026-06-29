@@ -1368,3 +1368,50 @@ select.form-control {
   box-shadow: none !important;
 }
 
+/* --- DARK THEME OVERRIDES --- */
+body.dark-theme {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #0f172a;
+  --bg-surface: #0f172a;
+  --bg-surface-hover: #1e293b;
+  --bg-surface-opaque: #1e293b;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(16, 159, 138, 0.4);
+  
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
+}
+
+body.dark-theme .sub-navbar {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .subjects-list-container .subject-card {
+  background: var(--bg-secondary) !important;
+}
+
+body.dark-theme .subjects-list-container .subject-card:hover {
+  background: var(--bg-surface-hover) !important;
+}
+
+body.dark-theme .modal-card {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+body.dark-theme .form-control {
+  background: #1e293b;
+  color: var(--text-primary);
+}
+
+body.dark-theme .form-control:focus {
+  background: #1e293b;
+}
+
+body.dark-theme .toast {
+  background: var(--bg-surface-opaque);
+  color: var(--text-primary);
+}
+

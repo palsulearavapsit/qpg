@@ -40,6 +40,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadEnvironment();
   }
   
+  // Initialize Theme from localStorage
+  const savedTheme = localStorage.getItem("theme");
+  if (savedTheme === "dark") {
+    document.body.classList.add("dark-theme");
+    const toggleBtn = document.getElementById("btn-theme-toggle");
+    if (toggleBtn) {
+      toggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    }
+  }
+
   // Check if Supabase credentials are configured
   const configured = isDbConfigured();
   const warningBanner = document.getElementById("gemini-warning-banner");
@@ -454,6 +464,22 @@ function setupEventListeners() {
   document.getElementById("btn-review-export-docx").addEventListener("click", () => {
     exportToDocx();
   });
+
+  // Theme Toggle listener
+  const toggleBtn = document.getElementById("btn-theme-toggle");
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", () => {
+      document.body.classList.toggle("dark-theme");
+      const isDark = document.body.classList.contains("dark-theme");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+      
+      toggleBtn.innerHTML = isDark 
+        ? '<i class="fa-solid fa-sun"></i>' 
+        : '<i class="fa-solid fa-moon"></i>';
+        
+      showToast(`Switched to ${isDark ? 'Dark' : 'Light'} Mode`, 'info');
+    });
+  }
 }
 
 // Dynamic thumbnail generator based on subject name and code
