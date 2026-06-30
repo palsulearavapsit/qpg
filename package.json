@@ -1,0 +1,12 @@
+{
+  "name": "ai-question-paper-generator",
+  "version": "1.0.0",
+  "description": "AI-powered question paper generator for APSIT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
