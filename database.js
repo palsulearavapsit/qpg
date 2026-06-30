@@ -87,11 +87,13 @@ const DatabaseService = {
     const ADMIN_PASSWORD = "admin";
 
     // --- ADMIN HARDCODED BYPASS ---
-    // Admin credentials are hardcoded — always works, no Supabase Auth dependency
+    // UI password is "admin" but Supabase Auth needs ≥6 chars, so we use an internal password
     if (email.toLowerCase() === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      // Build the admin profile immediately — this is always returned
+      const ADMIN_AUTH_PASSWORD = "admin@apsit_2024"; // Internal Supabase Auth password (≥6 chars)
+
+      // Build the admin profile immediately — always returned regardless of Auth state
       const adminProfile = {
-        id: 'admin-' + Date.now(),
+        id: 'admin-synthetic',
         name: "System Admin",
         email: ADMIN_EMAIL,
         role: "admin",
@@ -99,43 +101,41 @@ const DatabaseService = {
         created_at: new Date().toISOString()
       };
 
-      // Try to establish a real Supabase Auth session in the background (non-fatal)
-      // This enables DB writes to work via RLS
+      // Step 1: Try signing in with internal password (works after first successful setup)
       try {
-        const { data: signInResult } = await supabaseClient.auth.signInWithPassword({
-          email: ADMIN_EMAIL, password: ADMIN_PASSWORD
+        const { data: signInResult, error: signInErr } = await supabaseClient.auth.signInWithPassword({
+          email: ADMIN_EMAIL, password: ADMIN_AUTH_PASSWORD
         });
-        if (signInResult?.user) {
+        if (!signInErr && signInResult?.user) {
           adminProfile.id = signInResult.user.id;
-          // Persist profile row (non-fatal)
-          try { await supabaseClient.from('profiles').upsert([adminProfile], { onConflict: 'id' }); } catch (_) {}
-          try { await supabaseClient.from('profiles').update({ role: 'admin', name: 'System Admin', password_text: ADMIN_PASSWORD }).eq('email', ADMIN_EMAIL); } catch (_) {}
+          try { await supabaseClient.from('profiles').upsert([{ id: signInResult.user.id, name: 'System Admin', email: ADMIN_EMAIL, role: 'admin', password_text: ADMIN_PASSWORD }], { onConflict: 'id' }); } catch (_) {}
           return { user: signInResult.user, profile: adminProfile };
         }
       } catch (_) {}
 
-      // Supabase Auth failed — try creating the account (non-fatal)
+      // Step 2: Account doesn't exist — create it with the internal password
       try {
-        const { data: signUpResult } = await supabaseClient.auth.signUp({
-          email: ADMIN_EMAIL, password: ADMIN_PASSWORD
+        const { data: signUpResult, error: signUpErr } = await supabaseClient.auth.signUp({
+          email: ADMIN_EMAIL, password: ADMIN_AUTH_PASSWORD
         });
-        if (signUpResult?.user) {
+        if (!signUpErr && signUpResult?.user) {
           adminProfile.id = signUpResult.user.id;
-          // Try signing in again right after signup
+          // Sign in immediately after signup
           const { data: signIn2 } = await supabaseClient.auth.signInWithPassword({
-            email: ADMIN_EMAIL, password: ADMIN_PASSWORD
+            email: ADMIN_EMAIL, password: ADMIN_AUTH_PASSWORD
           });
           const finalUser = signIn2?.user || signUpResult.user;
           adminProfile.id = finalUser.id;
-          try { await supabaseClient.from('profiles').upsert([adminProfile], { onConflict: 'id' }); } catch (_) {}
+          try { await supabaseClient.from('profiles').upsert([{ id: finalUser.id, name: 'System Admin', email: ADMIN_EMAIL, role: 'admin', password_text: ADMIN_PASSWORD }], { onConflict: 'id' }); } catch (_) {}
           return { user: finalUser, profile: adminProfile };
         }
       } catch (_) {}
 
-      // Ultimate fallback — return synthetic user so admin always logs in
-      const syntheticUser = { id: adminProfile.id, email: ADMIN_EMAIL, user_metadata: { role: 'admin' } };
+      // Ultimate fallback — synthetic session (read-only from anon RLS)
+      const syntheticUser = { id: 'admin-synthetic', email: ADMIN_EMAIL, user_metadata: { role: 'admin' } };
       return { user: syntheticUser, profile: adminProfile };
     }
+
 
 
     
