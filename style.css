@@ -1686,3 +1686,42 @@ body.dark-theme .badge-warning  { background: rgba(245,158,11,0.18); color: #fbb
 body.dark-theme .badge-danger   { background: rgba(239,68,68,0.18);  color: #f87171; }
 body.dark-theme .badge-info     { background: rgba(59,130,246,0.18); color: #60a5fa; }
 body.dark-theme .btn-icon-sm    { background: var(--bg-surface-opaque); border-color: var(--border-color); color: var(--text-secondary); }
+
+/* --- ADMIN ACCORDION --- */
+.admin-accordion {
+  border-radius: var(--radius-lg, 12px);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+.accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--bg-surface);
+  transition: background 0.2s;
+}
+.accordion-header:hover {
+  background: var(--bg-surface-hover);
+}
+.accordion-arrow {
+  font-size: 15px;
+  color: var(--text-muted);
+  transition: transform 0.3s ease;
+}
+.accordion-header.expanded .accordion-arrow {
+  transform: rotate(180deg);
+}
+.accordion-body {
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+.accordion-body .table-container {
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+

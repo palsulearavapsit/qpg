@@ -2200,4 +2200,21 @@ async function renderAdminDashboard() {
 }
 window.renderAdminDashboard = renderAdminDashboard;
 
+// =============================================
+// --- ADMIN ACCORDION TOGGLE ---
+// =============================================
+function toggleAdminSection(headerEl) {
+  const body = headerEl.nextElementSibling;
+  const isExpanded = headerEl.classList.contains('expanded');
 
+  if (isExpanded) {
+    // Collapse
+    headerEl.classList.remove('expanded');
+    body.style.display = 'none';
+  } else {
+    // Expand
+    headerEl.classList.add('expanded');
+    body.style.display = 'block';
+  }
+}
+window.toggleAdminSection = toggleAdminSection;

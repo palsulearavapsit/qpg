@@ -542,95 +542,99 @@
         </div>
 
         <!-- Admin: All Users (CRUD) -->
-        <div style="margin-top: 32px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-            <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin: 0;">All System Users</h2>
-            <button class="btn btn-primary" onclick="openAddUserModal()">
-              <i class="fa-solid fa-user-plus"></i> Add New User
-            </button>
+        <div class="admin-accordion" style="margin-top: 32px;">
+          <div class="accordion-header expanded" onclick="toggleAdminSection(this)" id="acc-users">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-users" style="color:var(--primary-color);"></i>
+              <h2 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin:0;">All System Users</h2>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button class="btn btn-primary" onclick="event.stopPropagation();openAddUserModal()">
+                <i class="fa-solid fa-user-plus"></i> Add New User
+              </button>
+              <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+            </div>
           </div>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>User Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Password Credential</th>
-                  <th>Subjects</th>
-                  <th>Papers</th>
-                  <th style="text-align: right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="admin-users-tbody">
-                <!-- Dynamic admin users table -->
-              </tbody>
-            </table>
+          <div class="accordion-body" style="display:block;">
+            <div class="table-container">
+              <table class="data-table">
+                <thead><tr>
+                  <th>User Name</th><th>Email</th><th>Role</th>
+                  <th>Password Credential</th><th>Subjects</th><th>Papers</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr></thead>
+                <tbody id="admin-users-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Admin: Password Reset Requests -->
-        <div style="margin-top: 32px;">
-          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">
-            <i class="fa-solid fa-key" style="color: var(--accent-color); margin-right: 8px;"></i>All Password Reset Requests
-          </h2>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Faculty Name</th>
-                  <th>Email</th>
-                  <th>Requested At</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="admin-requests-tbody">
-                <!-- Dynamic password reset requests -->
-              </tbody>
-            </table>
+        <div class="admin-accordion" style="margin-top: 16px;">
+          <div class="accordion-header" onclick="toggleAdminSection(this)" id="acc-requests">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-key" style="color:var(--accent-color);"></i>
+              <h2 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin:0;">All Password Reset Requests</h2>
+            </div>
+            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+          </div>
+          <div class="accordion-body" style="display:none;">
+            <div class="table-container">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Faculty Name</th><th>Email</th><th>Requested At</th>
+                  <th>Status</th><th style="text-align:right;">Actions</th>
+                </tr></thead>
+                <tbody id="admin-requests-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Admin: All Papers -->
-        <div style="margin-top: 32px;">
-          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Generated Papers</h2>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Paper Title</th>
-                  <th>Subject</th>
-                  <th>Faculty</th>
-                  <th>Exam Type</th>
-                  <th>Marks</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody id="admin-papers-tbody">
-              </tbody>
-            </table>
+        <div class="admin-accordion" style="margin-top: 16px;">
+          <div class="accordion-header" onclick="toggleAdminSection(this)" id="acc-papers">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-clipboard-list" style="color:var(--primary-color);"></i>
+              <h2 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin:0;">All Generated Papers</h2>
+            </div>
+            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+          </div>
+          <div class="accordion-body" style="display:none;">
+            <div class="table-container">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Paper Title</th><th>Subject</th><th>Faculty</th>
+                  <th>Exam Type</th><th>Marks</th><th>Created</th>
+                </tr></thead>
+                <tbody id="admin-papers-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
         <!-- Admin: All Materials -->
-        <div style="margin-top: 32px;">
-          <h2 style="font-family: var(--font-display); font-size: 20px; font-weight: 600; margin-bottom: 16px;">All Study Materials / Notes</h2>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>File Name</th>
-                  <th>Subject Code</th>
-                  <th>Uploaded</th>
-                </tr>
-              </thead>
-              <tbody id="admin-materials-tbody">
-              </tbody>
-            </table>
+        <div class="admin-accordion" style="margin-top: 16px; margin-bottom: 32px;">
+          <div class="accordion-header" onclick="toggleAdminSection(this)" id="acc-materials">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-file-lines" style="color:var(--primary-color);"></i>
+              <h2 style="font-family:var(--font-display);font-size:20px;font-weight:600;margin:0;">All Study Materials / Notes</h2>
+            </div>
+            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+          </div>
+          <div class="accordion-body" style="display:none;">
+            <div class="table-container">
+              <table class="data-table">
+                <thead><tr>
+                  <th>File Name</th><th>Subject Code</th><th>Uploaded</th>
+                </tr></thead>
+                <tbody id="admin-materials-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
+
 
     </main>
 
