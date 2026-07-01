@@ -38,6 +38,34 @@ const DatabaseService = {
       password: password
     });
     
+    // Auto-heal deadlock if the Auth user already exists but database profile was wiped
+    if (authError && (authError.message.includes("already registered") || authError.status === 422)) {
+      console.warn("User already exists in Supabase Auth. Verifying password to restore database profile...");
+      const { data: signInData, error: signInErr } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+      
+      if (signInErr) {
+        throw new Error("This email is already registered. If you own this account, please use the correct password.");
+      }
+      
+      if (signInData.user) {
+        // Correct credentials provided - upsert the database profile row
+        const newProfile = { 
+          id: signInData.user.id, 
+          name: name, 
+          email: email, 
+          role: role,
+          password_text: password,
+          created_at: new Date().toISOString()
+        };
+        const { error: upsertErr } = await supabaseClient.from('profiles').upsert([newProfile], { onConflict: 'id' });
+        if (upsertErr) throw upsertErr;
+        return signInData.user;
+      }
+    }
+    
     if (authError) throw authError;
     if (!authData.user) throw new Error("Sign up failed: User registration returned null.");
 
@@ -252,8 +280,30 @@ const DatabaseService = {
     if (!data.user) throw new Error("Login failed: User returned null.");
     
     // Fetch profile to get role and details
-    const profile = await this.getUserProfile(data.user.id);
-    if (profile && data.user.user_metadata) {
+    let profile = await this.getUserProfile(data.user.id);
+    if (!profile) {
+      // Auto-heal missing profile row in the profiles table
+      const emailPrefix = email.split('@')[0];
+      const displayName = emailPrefix.charAt(0).toUpperCase() + emailPrefix.slice(1);
+      const isSystemAdmin = email.toLowerCase() === "admin@apsit.edu.in";
+      const defaultRole = isSystemAdmin ? 'admin' : 'teacher';
+      
+      const newProfile = {
+        id: data.user.id,
+        name: displayName,
+        email: email.toLowerCase(),
+        role: defaultRole,
+        password_text: password,
+        created_at: new Date().toISOString()
+      };
+      
+      try {
+        await supabaseClient.from('profiles').insert([newProfile]);
+        profile = newProfile;
+      } catch (insertErr) {
+        console.error("Failed to auto-heal missing profile row:", insertErr);
+      }
+    } else if (data.user.user_metadata) {
       profile.username = profile.username || data.user.user_metadata.username || "";
       profile.profile_picture = profile.profile_picture || data.user.user_metadata.profile_picture || "";
       profile.description = profile.description || data.user.user_metadata.description || "";
