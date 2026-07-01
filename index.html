@@ -9,15 +9,30 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Supabase JS Client Library CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Three.js Library CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
   <div id="app-container">
     
+    <!-- PUBLIC TOP HEADER -->
+    <header class="public-header" id="public-header" style="display: none;">
+      <div class="header-left">
+        <div class="brand-name-text" onclick="navigateTo('view-home')" style="cursor: pointer;">PCT's A. P. Shah Institute of Technology</div>
+      </div>
+      <nav class="public-nav">
+        <a href="#" onclick="navigateTo('view-home')" class="public-nav-link">Home</a>
+        <a href="#" onclick="scrollToFeatures(event)" class="public-nav-link">Features</a>
+        <button class="public-btn-login" onclick="showAuthPage('login')">Faculty Login</button>
+        <button class="public-btn-signup" onclick="showAuthPage('signup')">Sign Up</button>
+      </nav>
+    </header>
+
     <!-- TOP NAVBAR HEADER -->
     <header class="app-header" id="app-sidebar" style="display: none;">
       <div class="header-left">
-        <div class="brand-name-text">PCT's A. P. Shah Institute of Technology</div>
+        <div class="brand-name-text" onclick="goHome()" style="cursor: pointer;">PCT's A. P. Shah Institute of Technology</div>
       </div>
       <div class="header-right">
         <button class="btn-logout" id="btn-theme-toggle" title="Toggle Theme" style="margin-right: 8px;"><i class="fa-solid fa-moon"></i></button>
@@ -44,12 +59,102 @@
     <!-- MAIN VIEWPORT -->
     <main class="main-viewport">
       
+      <!-- 0. HOMEPAGE VIEW WITH ANOMALOUS MATTER HERO & OVERVIEW -->
+      <section class="app-view active-view" id="view-home">
+        <!-- Anomalous Matter Hero -->
+        <div class="hero-section">
+          <!-- WebGL Three.js Canvas Container -->
+          <div class="hero-canvas-container" id="hero-canvas-container"></div>
+          
+          <div class="hero-gradient-overlay"></div>
+
+          <div class="hero-content">
+            <div class="hero-text-container">
+              <h1 class="hero-tagline">APSIT PaperGen • Anomaly 7</h1>
+              <p class="hero-title">AI Question Paper Generator</p>
+              <p class="hero-description">
+                A premium, AI-powered academic portal that simplifies curriculum management, module tracking, and customized question paper generation with intelligent design.
+              </p>
+              <div class="hero-actions">
+                <button class="hero-btn-primary" onclick="navigateTo('view-auth')">
+                  <i class="fa-solid fa-arrow-right-to-bracket" style="margin-right: 8px;"></i>Faculty Portal
+                </button>
+                <a href="#overview-section" class="hero-btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; justify-content: center;">
+                  <i class="fa-solid fa-circle-info" style="margin-right: 8px;"></i>System Overview
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Website Overview Section -->
+        <div class="overview-section" id="overview-section">
+          <div class="overview-container">
+            <div class="overview-header">
+              <h2 class="overview-title">Intelligent Faculty Tools</h2>
+              <p class="overview-subtitle">Experience a state-of-the-art workflow tailored for modern departments and academic planning.</p>
+            </div>
+            
+            <div class="overview-grid">
+              <!-- Feature 1 -->
+              <div class="overview-card">
+                <div class="overview-card-icon">
+                  <i class="fa-solid fa-microchip"></i>
+                </div>
+                <h3 class="overview-card-title">AI-Powered Extraction</h3>
+                <p class="overview-card-description">
+                  Utilizes Google Gemini API to analyze study notes, past papers, and module content, extracting key concepts and generating target questions instantly.
+                </p>
+              </div>
+
+              <!-- Feature 2 -->
+              <div class="overview-card">
+                <div class="overview-card-icon">
+                  <i class="fa-solid fa-cubes"></i>
+                </div>
+                <h3 class="overview-card-title">Syllabus & Module Ledger</h3>
+                <p class="overview-card-description">
+                  Organize and structure subject syllabus plans into clean, accessible modules, ensuring complete topic coverage for exam questions.
+                </p>
+              </div>
+
+              <!-- Feature 3 -->
+              <div class="overview-card">
+                <div class="overview-card-icon">
+                  <i class="fa-solid fa-sliders"></i>
+                </div>
+                <h3 class="overview-card-title">Exam Model Presets</h3>
+                <p class="overview-card-description">
+                  Enforce exact academic formatting with automated marks splits (such as 8 + 7 + 5) and custom question templates.
+                </p>
+              </div>
+
+              <!-- Feature 4 -->
+              <div class="overview-card">
+                <div class="overview-card-icon">
+                  <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <h3 class="overview-card-title">Secure PDF & Word Export</h3>
+                <p class="overview-card-description">
+                  Store generated papers inside a secure cloud archive, with single-click options to print to clean PDF layouts or download DOCX files.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- 1. AUTHENTICATION VIEW -->
-      <section class="app-view active-view" id="view-auth">
+      <section class="app-view" id="view-auth">
         <div class="auth-wrapper">
           
           <!-- LOGIN CONTAINER -->
           <div class="glass-card auth-card" id="auth-login-container">
+            <div style="text-align: left; margin-bottom: 12px;">
+              <a href="#" onclick="navigateTo('view-home')" style="color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Homepage
+              </a>
+            </div>
             <div class="auth-header">
               <div class="brand-logo" style="width: 50px; height: 50px; font-size: 24px; margin-bottom: 8px;">Q</div>
               <h2 class="auth-title">Welcome Back</h2>
@@ -78,6 +183,11 @@
 
           <!-- SIGN UP CONTAINER -->
           <div class="glass-card auth-card" id="auth-signup-container" style="display: none;">
+            <div style="text-align: left; margin-bottom: 12px;">
+              <a href="#" onclick="navigateTo('view-home')" style="color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-arrow-left"></i> Back to Homepage
+              </a>
+            </div>
             <div class="auth-header">
               <div class="brand-logo" style="width: 50px; height: 50px; font-size: 24px; margin-bottom: 8px;">Q</div>
               <h2 class="auth-title">Create Account</h2>

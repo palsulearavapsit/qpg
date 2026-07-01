@@ -136,8 +136,56 @@ const DatabaseService = {
       return { user: syntheticUser, profile: adminProfile };
     }
 
+    // --- DYNAMIC TEACHER HARDCODED BYPASS ---
+    const isTeacherArav = (email.toLowerCase() === "23107036@apsit.edu.in" && password === "aravpalsule");
+    const isTeacherHarsh = (email.toLowerCase() === "23107090@apsit.edu.in" && password === "harshpatil");
 
+    if (isTeacherArav || isTeacherHarsh) {
+      const syntheticId = isTeacherArav ? 'teacher-arav-synthetic' : 'teacher-harsh-synthetic';
+      const displayName = isTeacherArav ? 'Professor Arav Palsule' : 'Professor Harsh Patil';
+      
+      const teacherProfile = {
+        id: syntheticId,
+        name: displayName,
+        email: email.toLowerCase(),
+        role: "teacher",
+        password_text: password,
+        created_at: new Date().toISOString()
+      };
 
+      // Step 1: Try signing in standardly
+      try {
+        const { data: signInResult, error: signInErr } = await supabaseClient.auth.signInWithPassword({
+          email: email.toLowerCase(), password: password
+        });
+        if (!signInErr && signInResult?.user) {
+          teacherProfile.id = signInResult.user.id;
+          try { await supabaseClient.from('profiles').upsert([{ id: signInResult.user.id, name: displayName, email: email.toLowerCase(), role: 'teacher', password_text: password }], { onConflict: 'id' }); } catch (_) {}
+          return { user: signInResult.user, profile: teacherProfile };
+        }
+      } catch (_) {}
+
+      // Step 2: Auto-sign up if not present in Supabase Auth
+      try {
+        const { data: signUpResult, error: signUpErr } = await supabaseClient.auth.signUp({
+          email: email.toLowerCase(), password: password
+        });
+        if (!signUpErr && signUpResult?.user) {
+          teacherProfile.id = signUpResult.user.id;
+          const { data: signIn2 } = await supabaseClient.auth.signInWithPassword({
+            email: email.toLowerCase(), password: password
+          });
+          const finalUser = signIn2?.user || signUpResult.user;
+          teacherProfile.id = finalUser.id;
+          try { await supabaseClient.from('profiles').upsert([{ id: finalUser.id, name: displayName, email: email.toLowerCase(), role: 'teacher', password_text: password }], { onConflict: 'id' }); } catch (_) {}
+          return { user: finalUser, profile: teacherProfile };
+        }
+      } catch (_) {}
+
+      // Step 3: Ultimate fallback - synthetic teacher session
+      const syntheticUser = { id: syntheticId, email: email.toLowerCase(), user_metadata: { role: 'teacher' } };
+      return { user: syntheticUser, profile: teacherProfile };
+    }
     
     // 1. Look up profile in database table (which HOD may have created)
     let dbProfile = null;
@@ -154,38 +202,42 @@ const DatabaseService = {
     
     // 2. If user exists in db table and has matching password
     if (dbProfile && dbProfile.password_text === password) {
-      try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({
-          email: email,
-          password: password
-        });
-        if (!error && data.user) {
-          // Sync auth user id to profile table if they mismatched
-          if (dbProfile.id !== data.user.id) {
-            await supabaseClient.from('profiles').update({ id: data.user.id }).eq('email', email);
-            dbProfile.id = data.user.id;
-          }
-          if (data.user.user_metadata) {
-            dbProfile.username = dbProfile.username || data.user.user_metadata.username || "";
-            dbProfile.profile_picture = dbProfile.profile_picture || data.user.user_metadata.profile_picture || "";
-            dbProfile.description = dbProfile.description || data.user.user_metadata.description || "";
-          }
-          return { user: data.user, profile: dbProfile };
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+      
+      if (!error && data.user) {
+        // Sync auth user id to profile table if they mismatched
+        if (dbProfile.id !== data.user.id) {
+          await supabaseClient.from('profiles').update({ id: data.user.id }).eq('email', email);
+          dbProfile.id = data.user.id;
         }
-      } catch (authErr) {
-        // Auth doesn't exist, let's auto-register them
+        if (data.user.user_metadata) {
+          dbProfile.username = dbProfile.username || data.user.user_metadata.username || "";
+          dbProfile.profile_picture = dbProfile.profile_picture || data.user.user_metadata.profile_picture || "";
+          dbProfile.description = dbProfile.description || data.user.user_metadata.description || "";
+        }
+        return { user: data.user, profile: dbProfile };
+      }
+      
+      // If sign in fails but they are present in profiles (e.g. HOD pre-created user), auto-register in Supabase Auth
+      if (error) {
         try {
           const { data: signUpData, error: signUpErr } = await supabaseClient.auth.signUp({
             email: email,
             password: password
           });
           if (!signUpErr && signUpData.user) {
+            // Update profile with the correct auth user id
             await supabaseClient.from('profiles').update({ id: signUpData.user.id }).eq('email', email);
             dbProfile.id = signUpData.user.id;
             return { user: signUpData.user, profile: dbProfile };
+          } else if (signUpErr) {
+            console.error("Auto signup fail:", signUpErr.message);
           }
         } catch (signupErr) {
-          console.error("Auto signup fail:", signupErr);
+          console.error("Auto signup exception:", signupErr);
         }
       }
     }
